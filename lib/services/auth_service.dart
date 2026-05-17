@@ -1,0 +1,52 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+class AuthService {
+  static const String baseUrl = 'https://route-backend-wkiy.onrender.com';
+  static const String _keyLoggedIn = 'is_logged_in';
+  static const String _keyUsername = 'username';
+
+  /// Giriş yapar. Hata varsa hata mesajı döner, başarılıysa null döner.
+  static Future<String?> login(String username, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username, 'password': password}),
+      ).timeout(const Duration(seconds: 10));
+
+      final body = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(_keyLoggedIn, true);
+        await prefs.setString(_keyUsername, username);
+        return null;
+      } else {
+        return body['error'] ?? 'Kullanıcı adı veya şifre hatalı';
+      }
+    } catch (e) {
+      return 'Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin.';
+    }
+  }
+
+  /// Oturumu kapatır.
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyLoggedIn);
+    await prefs.remove(_keyUsername);
+  }
+
+  /// Uygulama açılışında oturum açık mı kontrol eder.
+  static Future<bool> isLoggedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyLoggedIn) ?? false;
+  }
+
+  /// Giriş yapan kullanıcı adını döner.
+  static Future<String> getUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyUsername) ?? '';
+  }
+}

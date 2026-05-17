@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../services/mock_data_service.dart';
-import '../models/address_model.dart' as address_models;
-import '../theme/app_colors.dart';
+import 'package:provider/provider.dart';
+import '../services/route_provider.dart';
+import '../models/address_model.dart';
+import 'address_detail_screen.dart';
+
+class _C {
+  static const bg        = Color(0xFFF0F4F8);
+  static const surface   = Color(0xFFFFFFFF);
+  static const accent    = Color(0xFF53D6FF);
+  static const accentDark= Color(0xFF0D47A1);
+  static const textDark  = Color(0xFF1A2236);
+  static const textMid   = Color(0xFF5A6A85);
+  static const textLight = Color(0xFF9DAFC8);
+  static const stroke    = Color(0xFFE2E8F0);
+  static const success   = Color(0xFF22C55E);
+}
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({Key? key}) : super(key: key);
@@ -13,444 +26,352 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen> {
   late DateTime _currentWeekStart;
-  late int _selectedDayIndex;
+  late DateTime _selectedDay;
 
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
     _currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
-    _selectedDayIndex = 0;
+    _selectedDay = now;
   }
 
-  void _previousWeek() {
-    setState(() {
-      _currentWeekStart = _currentWeekStart.subtract(const Duration(days: 7));
-    });
-  }
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
-  void _nextWeek() {
-    setState(() {
-      _currentWeekStart = _currentWeekStart.add(const Duration(days: 7));
-    });
-  }
+  bool _isToday(DateTime d) => _isSameDay(d, DateTime.now());
+
+  // Seçili gün bugün mü — bugünse provider adreslerini göster, değilse boş
+  bool get _isSelectedToday => _isSameDay(_selectedDay, DateTime.now());
 
   @override
   Widget build(BuildContext context) {
-    final weekDays = <DateTime>[];
-    for (int i = 0; i < 7; i++) {
-      weekDays.add(_currentWeekStart.add(Duration(days: i)));
-    }
+    final weekDays = List.generate(7, (i) => _currentWeekStart.add(Duration(days: i)));
 
-    final selectedDay = weekDays[_selectedDayIndex];
-    final todayRoute = MockDataService.getTodayRoute();
+    return Consumer<RouteProvider>(
+      builder: (context, provider, _) {
+        final addresses = _isSelectedToday ? provider.addresses : <Address>[];
+        final completed = addresses.where((a) => a.isCompleted).length;
+        final total = addresses.length;
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.primaryDark,
-        elevation: 0,
-        centerTitle: false,
-        title: const Text(
-          'Haftalık Takvim',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-      body: Column(
-        children: [
-          // Week navigation header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  onPressed: _previousWeek,
-                  icon: const Icon(Icons.chevron_left),
-                  color: AppColors.primary,
-                ),
-                Text(
-                  '${DateFormat('d MMM', 'tr_TR').format(weekDays.first)} - ${DateFormat('d MMM yyyy', 'tr_TR').format(weekDays.last)}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark,
+        return Scaffold(
+          backgroundColor: _C.bg,
+          body: Column(
+            children: [
+              // ── App Bar ──────────────────────────────────────────────
+              Container(
+                color: _C.surface,
+                child: SafeArea(
+                  bottom: false,
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Takvim',
+                                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: _C.textDark)),
+                            // Hafta navigasyonu
+                            Row(
+                              children: [
+                                _navButton(Icons.chevron_left_rounded, () {
+                                  setState(() {
+                                    _currentWeekStart = _currentWeekStart.subtract(const Duration(days: 7));
+                                  });
+                                }),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${DateFormat('d MMM', 'tr_TR').format(weekDays.first)} – ${DateFormat('d MMM', 'tr_TR').format(weekDays.last)}',
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _C.textMid),
+                                ),
+                                const SizedBox(width: 4),
+                                _navButton(Icons.chevron_right_rounded, () {
+                                  setState(() {
+                                    _currentWeekStart = _currentWeekStart.add(const Duration(days: 7));
+                                  });
+                                }),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // ── Haftalık gün seçici ───────────────────────────
+                      SizedBox(
+                        height: 76,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          itemCount: 7,
+                          itemBuilder: (context, i) {
+                            final day = weekDays[i];
+                            final isSelected = _isSameDay(day, _selectedDay);
+                            final isToday = _isToday(day);
+
+                            return GestureDetector(
+                              onTap: () => setState(() => _selectedDay = day),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                width: 44,
+                                margin: const EdgeInsets.symmetric(horizontal: 4),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? _C.accentDark : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? _C.accentDark
+                                        : isToday
+                                            ? _C.accent
+                                            : Colors.transparent,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      DateFormat('E', 'tr_TR').format(day).substring(0, 2).toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: isSelected ? Colors.white.withOpacity(0.7) : _C.textLight,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      day.day.toString(),
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : isToday
+                                                ? _C.accent
+                                                : _C.textDark,
+                                      ),
+                                    ),
+                                    // Bugün noktası
+                                    if (isToday && !isSelected)
+                                      Container(
+                                        width: 4, height: 4,
+                                        decoration: const BoxDecoration(color: _C.accent, shape: BoxShape.circle),
+                                      )
+                                    else
+                                      const SizedBox(height: 4),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Divider(height: 1, color: _C.stroke),
+                    ],
                   ),
                 ),
-                IconButton(
-                  onPressed: _nextWeek,
-                  icon: const Icon(Icons.chevron_right),
-                  color: AppColors.primary,
-                ),
-              ],
-            ),
-          ),
+              ),
 
-          // Weekly day tabs
-          SizedBox(
-            height: 120,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              itemCount: 7,
-              itemBuilder: (context, index) {
-                final day = weekDays[index];
-                final isSelected = _selectedDayIndex == index;
-                final isToday = _isToday(day);
-
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedDayIndex = index;
-                    });
-                  },
-                  child: Container(
-                    width: 80,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primaryDark : Colors.white,
-                      border: Border.all(
-                        color: isSelected
-                            ? AppColors.primaryDark
-                            : (isToday ? AppColors.primary : AppColors.border),
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          DateFormat('E', 'tr_TR').format(day).substring(0, 3),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color:
-                                isSelected ? Colors.white : AppColors.textLight,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          day.day.toString(),
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color:
-                                isSelected ? Colors.white : AppColors.textDark,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          DateFormat('MMM', 'tr_TR').format(day),
-                          style: TextStyle(
-                            fontSize: 10,
-                            color:
-                                isSelected ? Colors.white : AppColors.textLight,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-
-          // Route details for selected day
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Selected day info
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.lightBg,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Row(
+              // ── İçerik ───────────────────────────────────────────────
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Seçili gün başlığı
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                DateFormat('EEEE', 'tr_TR').format(selectedDay),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textLight,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.5,
-                                ),
+                                DateFormat('EEEE', 'tr_TR').format(_selectedDay),
+                                style: const TextStyle(fontSize: 12, color: _C.textLight, fontWeight: FontWeight.w600),
                               ),
-                              const SizedBox(height: 4),
                               Text(
-                                DateFormat('d MMMM yyyy', 'tr_TR')
-                                    .format(selectedDay),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textDark,
-                                ),
+                                DateFormat('d MMMM yyyy', 'tr_TR').format(_selectedDay),
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _C.textDark),
                               ),
                             ],
                           ),
-                          if (_isSameDay(selectedDay, DateTime.now()))
+                          if (_isSelectedToday)
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: AppColors.success,
-                                borderRadius: BorderRadius.circular(16),
+                                color: _C.success.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: _C.success.withOpacity(0.3)),
                               ),
-                              child: const Text(
-                                'Bugün',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                              child: const Text('Bugün',
+                                  style: TextStyle(fontSize: 12, color: _C.success, fontWeight: FontWeight.w600)),
                             ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
-                    // Route summary for selected day
-                    Text(
-                      'Rota Özeti',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Stats
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatBox(
-                            '📍',
-                            todayRoute.totalStops.toString(),
-                            'Adres',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildStatBox(
-                            '📏',
-                            todayRoute.totalDistance.toStringAsFixed(1),
-                            'km',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildStatBox(
-                            '⏱️',
-                            '2.5',
-                            'saat',
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Timeline sections
-                    _buildTimelineSection(
-                      'SABAH',
-                      todayRoute.addresses.take(2).toList(),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTimelineSection(
-                      'EVE DÖNÜŞ',
-                      todayRoute.addresses.skip(2).take(2).toList(),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTimelineSection(
-                      'ÖĞLEDEN SONRA',
-                      todayRoute.addresses.skip(4).toList(),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatBox(String icon, String value, String label) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            icon,
-            style: const TextStyle(fontSize: 24),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppColors.textLight,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimelineSection(
-    String sectionTitle,
-    List<address_models.Address> addresses,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(
-            sectionTitle,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              letterSpacing: 1.0,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (addresses.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.lightBg,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: const Text(
-              'Bu bölümde rota yok',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textLight,
-              ),
-            ),
-          )
-        else
-          Column(
-            children: addresses.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final address = entry.value;
-
-              return Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                      if (_isSelectedToday) ...[
+                        // İstatistikler
                         Container(
-                          width: 32,
-                          height: 32,
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryDark,
-                            shape: BoxShape.circle,
+                            color: _C.surface,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: _C.stroke),
                           ),
-                          child: Center(
-                            child: Text(
-                              address.orderNumber.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                address.customerName,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textDark,
-                                ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Rota İlerlemesi',
+                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _C.textDark)),
+                                  Text('$completed/$total',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _C.accent)),
+                                ],
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${address.street}, ${address.district}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.textLight,
+                              const SizedBox(height: 10),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: LinearProgressIndicator(
+                                  value: total == 0 ? 0 : completed / total,
+                                  minHeight: 6,
+                                  backgroundColor: _C.stroke,
+                                  valueColor: AlwaysStoppedAnimation(
+                                    completed == total && total > 0 ? _C.success : _C.accent,
+                                  ),
                                 ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
                         ),
+                        const SizedBox(height: 16),
+
+                        // Adres listesi
+                        const Text('GÜNÜN ROTASI',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                                color: _C.textLight, letterSpacing: 1.0)),
+                        const SizedBox(height: 10),
+
+                        ...addresses.asMap().entries.map((e) => _addressItem(context, e.key, e.value)),
+                      ] else ...[
+                        // Başka gün seçildi
+                        Container(
+                          padding: const EdgeInsets.all(40),
+                          decoration: BoxDecoration(
+                            color: _C.surface,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: _C.stroke),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(Icons.event_available_rounded, size: 48,
+                                  color: _C.textLight.withOpacity(0.5)),
+                              const SizedBox(height: 16),
+                              const Text('Bu güne ait rota yok',
+                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: _C.textMid)),
+                              const SizedBox(height: 6),
+                              const Text('Rotalar web uygulamasından oluşturulur',
+                                  style: TextStyle(fontSize: 12, color: _C.textLight)),
+                            ],
+                          ),
+                        ),
                       ],
-                    ),
+
+                      const SizedBox(height: 24),
+                    ],
                   ),
-                  if (idx < addresses.length - 1) const SizedBox(height: 8),
-                ],
-              );
-            }).toList(),
+                ),
+              ),
+            ],
           ),
-      ],
+        );
+      },
     );
   }
 
-  bool _isToday(DateTime date) {
-    final now = DateTime.now();
-    return _isSameDay(date, now);
+  Widget _addressItem(BuildContext context, int index, Address address) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AddressDetailScreen(address: address, index: index),
+        ),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _C.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: address.isCompleted ? _C.success.withOpacity(0.3) : _C.stroke,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Zaman çizelgesi sol taraf
+            Column(
+              children: [
+                Container(
+                  width: 28, height: 28,
+                  decoration: BoxDecoration(
+                    color: address.isCompleted
+                        ? _C.success.withOpacity(0.12)
+                        : _C.accent.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: address.isCompleted
+                        ? const Icon(Icons.check_rounded, size: 14, color: _C.success)
+                        : Text('${index + 1}',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _C.accent)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    address.customerName,
+                    style: TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w700,
+                      color: address.isCompleted ? _C.textLight : _C.textDark,
+                      decoration: address.isCompleted ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text('${address.street}, ${address.district}',
+                      style: const TextStyle(fontSize: 11, color: _C.textLight),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: _C.textLight, size: 18),
+          ],
+        ),
+      ),
+    );
   }
 
-  bool _isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year &&
-        date1.month == date2.month &&
-        date1.day == date2.day;
+  Widget _navButton(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32, height: 32,
+        decoration: BoxDecoration(
+          color: _C.bg,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, size: 20, color: _C.textMid),
+      ),
+    );
   }
 }

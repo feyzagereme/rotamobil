@@ -18,7 +18,7 @@ class MockDataService {
         longitude: 27.1842,
         customerName: 'Sabit Bağlantıç / Ev',
         customerType: 'Başlangıç Noktası',
-        isCompleted: true,
+        isCompleted: false,
       ),
       Address(
         id: 2,
@@ -32,7 +32,7 @@ class MockDataService {
         longitude: 27.1742,
         customerName: 'Diğer Lokasyon',
         customerType: 'Müşteri',
-        isCompleted: true,
+        isCompleted: false,
       ),
       Address(
         id: 3,
