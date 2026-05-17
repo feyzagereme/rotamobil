@@ -5,6 +5,10 @@ import '../services/route_provider.dart';
 import 'address_detail_screen.dart';
 import '../models/address_model.dart';
 
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
 class _C {
   static const bg        = Color(0xFFF0F4F8);
   static const surface   = Color(0xFFFFFFFF);
@@ -27,6 +31,10 @@ class RouteListScreen extends StatefulWidget {
 class _RouteListScreenState extends State<RouteListScreen> {
   bool _isRecalculating = false;
 
+    bool _isLoadingRoutes = false;
+    List<dynamic> _backendRoutes = [];
+    String? _routeError;
+
   Future<void> _onReorder(int oldIndex, int newIndex) async {
     HapticFeedback.lightImpact();
     context.read<RouteProvider>().reorder(oldIndex, newIndex);
@@ -34,6 +42,45 @@ class _RouteListScreenState extends State<RouteListScreen> {
     setState(() => _isRecalculating = true);
     await Future.delayed(const Duration(milliseconds: 800));
     if (mounted) setState(() => _isRecalculating = false);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBackendRoutes();
+  }
+
+  Future<void> _fetchBackendRoutes() async {
+    setState(() {
+      _isLoadingRoutes = true;
+      _routeError = null;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt("user_id") ?? 1;
+
+      final response = await http.get(
+        Uri.parse("https://route-backend-wkiy.onrender.com/routes/$userId"),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _backendRoutes = jsonDecode(response.body);
+          _isLoadingRoutes = false;
+        });
+      } else {
+        setState(() {
+          _routeError = "Rotalar alınamadı: ${response.statusCode}";
+          _isLoadingRoutes = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _routeError = "Sunucuya bağlanılamadı";
+        _isLoadingRoutes = false;
+      });
+    }
   }
 
   @override
@@ -130,6 +177,133 @@ class _RouteListScreenState extends State<RouteListScreen> {
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: _C.surface,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: _C.stroke),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        "Backend Rotaları",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: _C.textDark,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+
+                                      if (_isLoadingRoutes)
+                                        const Text(
+                                          "Rotalar yükleniyor...",
+                                          style: TextStyle(fontSize: 12, color: _C.textMid),
+                                        )
+                                      else if (_routeError != null)
+                                        Text(
+                                          _routeError!,
+                                          style: const TextStyle(fontSize: 12, color: Colors.red),
+                                        )
+                                      else if (_backendRoutes.isEmpty)
+                                        const Text(
+                                          "Backend’de kayıtlı rota yok.",
+                                          style: TextStyle(fontSize: 12, color: _C.textMid),
+                                        )
+                                      else
+                                        ..._backendRoutes.map((route) {
+                                          final routeJson = route["route_json"];
+
+                                          final totalKm = routeJson is Map ? routeJson["totalKm"] : null;
+                                          final totalMin = routeJson is Map ? routeJson["totalMin"] : null;
+                                          final path = routeJson is Map ? routeJson["path"] : null;
+final stopCount = path is List ? (path.length > 0 ? path.length - 1 : 0) : null;
+final routeAddresses = path is List
+    ? path.skip(1).map((e) => e.toString()).toList()
+    : <String>[];
+                                          String detailText = "";
+
+                                          if (totalKm != null) {
+                                            detailText += "${totalKm.toString()} km";
+                                          }
+
+                                          if (totalMin != null) {
+                                            detailText += detailText.isEmpty ? "$totalMin dk" : " • $totalMin dk";
+                                          }
+
+                                          if (stopCount != null) {
+                                            detailText += detailText.isEmpty ? "$stopCount durak" : " • $stopCount durak";
+                                          }
+
+                                          return Container(
+                                            margin: const EdgeInsets.only(top: 8),
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: _C.accent.withOpacity(0.08),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.route_rounded, color: _C.accentDark),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        route["name"] ?? "İsimsiz Rota",
+                                                        style: const TextStyle(
+                                                          fontSize: 13,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: _C.textDark,
+                                                        ),
+                                                      ),
+                                                      if (detailText.isNotEmpty) ...[
+                                                        const SizedBox(height: 4),
+                                                        Text(
+                                                          detailText,
+                                                          style: const TextStyle(
+                                                            fontSize: 11,
+                                                            color: _C.textMid,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                      if (routeAddresses.isNotEmpty) ...[
+                                                        const SizedBox(height: 6),
+                                                        ...routeAddresses.take(3).map(
+                                                          (address) => Padding(
+                                                            padding: const EdgeInsets.only(top: 2),
+                                                            child: Text(
+                                                              "• $address",
+                                                              maxLines: 1,
+                                                              overflow: TextOverflow.ellipsis,
+                                                              style: const TextStyle(
+                                                                fontSize: 10,
+                                                                color: _C.textMid,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }).toList(),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
 
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),

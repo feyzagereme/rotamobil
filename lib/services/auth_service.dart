@@ -20,6 +20,15 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final prefs = await SharedPreferences.getInstance();
+
+        final userId = body["user_id"];
+        if (userId != null) {
+          await prefs.setInt(
+            "user_id",
+            userId is int ? userId : int.parse(userId.toString()),
+          );
+        }
+
         await prefs.setBool(_keyLoggedIn, true);
         await prefs.setString(_keyUsername, username);
         return null;
