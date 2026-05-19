@@ -3,19 +3,7 @@ import '../services/auth_service.dart';
 import '../services/mock_data_service.dart';
 import '../models/driver_model.dart';
 import '../models/route_model.dart' as route_models;
-
-class _C {
-  static const bg        = Color(0xFFF0F4F8);
-  static const surface   = Color(0xFFFFFFFF);
-  static const accent    = Color(0xFF53D6FF);
-  static const accentDark= Color(0xFF0D47A1);
-  static const textDark  = Color(0xFF1A2236);
-  static const textMid   = Color(0xFF5A6A85);
-  static const textLight = Color(0xFF9DAFC8);
-  static const stroke    = Color(0xFFE2E8F0);
-  static const success   = Color(0xFF22C55E);
-  static const error     = Color(0xFFE53935);
-}
+import '../theme/app_colors.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -54,18 +42,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Çıkış Yap',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: _C.textDark)),
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textDark)),
         content: const Text('Hesabınızdan çıkış yapmak istediğinize emin misiniz?',
-            style: TextStyle(fontSize: 14, color: _C.textMid)),
+            style: TextStyle(fontSize: 14, color: AppColors.textMid)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('İptal', style: TextStyle(color: _C.textMid)),
+            child: const Text('İptal', style: TextStyle(color: AppColors.textMid)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _C.error,
+              backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               elevation: 0,
@@ -97,42 +85,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final pct = todayRoute.completionPercentage;
 
     return Scaffold(
-      backgroundColor: _C.bg,
+      backgroundColor: AppColors.bgLight,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             pinned: true,
-            backgroundColor: _C.surface,
+            backgroundColor: AppColors.surface,
             surfaceTintColor: Colors.transparent,
             elevation: 0,
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(1),
-              child: Container(height: 1, color: _C.stroke),
+              child: Container(height: 1, color: AppColors.stroke),
             ),
             title: const Text('Profil',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: _C.textDark)),
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textDark)),
           ),
 
           SliverToBoxAdapter(
             child: Column(
               children: [
-                // ── Profil başlığı ──────────────────────────────────────
+                // ── Profil başlığı
                 Container(
-                  color: _C.surface,
+                  color: AppColors.surface,
                   padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
                   child: Row(
                     children: [
                       Container(
-                        width: 60,
-                        height: 60,
+                        width: 60, height: 60,
                         decoration: BoxDecoration(
-                          color: _C.accent.withOpacity(0.12),
+                          color: AppColors.accent.withValues(alpha: 0.12),
                           shape: BoxShape.circle,
-                          border: Border.all(color: _C.stroke, width: 1.5),
+                          border: Border.all(color: AppColors.stroke, width: 1.5),
                         ),
                         child: Center(
                           child: Text(initials,
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _C.accentDark)),
+                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -141,19 +128,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(_username,
-                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: _C.textDark)),
+                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                             const SizedBox(height: 3),
                             const Text('Rota Sürücüsü',
-                                style: TextStyle(fontSize: 13, color: _C.textLight)),
+                                style: TextStyle(fontSize: 13, color: AppColors.textLight)),
                             const SizedBox(height: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: _C.success.withOpacity(0.1),
+                                color: AppColors.success.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: const Text('● Aktif',
-                                  style: TextStyle(fontSize: 11, color: _C.success, fontWeight: FontWeight.w600)),
+                                  style: TextStyle(fontSize: 11, color: AppColors.success, fontWeight: FontWeight.w600)),
                             ),
                           ],
                         ),
@@ -164,7 +151,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 const SizedBox(height: 12),
 
-                // ── Bugünün Özeti ───────────────────────────────────────
+                // ── Bugünün Özeti
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
@@ -177,29 +164,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           children: [
                             const Text('BUGÜNÜN ÖZETİ',
                                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-                                    color: _C.textLight, letterSpacing: 1.0)),
+                                    color: AppColors.textLight, letterSpacing: 1.0)),
                             Text(_todayDate(),
-                                style: const TextStyle(fontSize: 11, color: _C.textLight)),
+                                style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
                           ],
                         ),
                       ),
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: _C.surface,
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: _C.stroke),
+                          border: Border.all(color: AppColors.stroke),
                         ),
                         child: Column(
                           children: [
-                            // İlerleme
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('$completed / $total adres tamamlandı',
-                                    style: const TextStyle(fontSize: 13, color: _C.textMid)),
+                                    style: const TextStyle(fontSize: 13, color: AppColors.textMid)),
                                 Text('%${pct.toStringAsFixed(0)}',
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _C.textDark)),
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                               ],
                             ),
                             const SizedBox(height: 10),
@@ -208,16 +194,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: LinearProgressIndicator(
                                 value: pct / 100,
                                 minHeight: 6,
-                                backgroundColor: _C.stroke,
-                                valueColor: AlwaysStoppedAnimation(pct == 100 ? _C.success : _C.accent),
+                                backgroundColor: AppColors.stroke,
+                                valueColor: AlwaysStoppedAnimation(pct == 100 ? AppColors.success : AppColors.accent),
                               ),
                             ),
                             const SizedBox(height: 16),
-                            // Özet satırları
                             _summaryRow(Icons.straighten_rounded, 'Toplam Mesafe', '${todayRoute.totalDistance.toStringAsFixed(1)} km'),
-                            Divider(height: 20, color: _C.stroke),
+                            Divider(height: 20, color: AppColors.stroke),
                             _summaryRow(Icons.timer_rounded, 'Tahmini Süre', '2 saat 30 dk'),
-                            Divider(height: 20, color: _C.stroke),
+                            Divider(height: 20, color: AppColors.stroke),
                             _summaryRow(Icons.route_rounded, 'Toplam Rota', '${driver.totalRoutes} rota'),
                           ],
                         ),
@@ -225,44 +210,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       const SizedBox(height: 20),
 
-                      // ── Ayarlar ───────────────────────────────────────
+                      // ── Ayarlar
                       const Padding(
                         padding: EdgeInsets.only(left: 4, bottom: 10),
                         child: Text('AYARLAR',
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-                                color: _C.textLight, letterSpacing: 1.0)),
+                                color: AppColors.textLight, letterSpacing: 1.0)),
                       ),
                       _settingsCard([
                         _toggleRow(Icons.notifications_rounded, 'Bildirimler',
                             notificationsEnabled, (v) => setState(() => notificationsEnabled = v)),
-                        Divider(height: 1, color: _C.stroke),
+                        Divider(height: 1, color: AppColors.stroke),
                         _toggleRow(Icons.gps_fixed_rounded, 'GPS Konum Takibi',
                             gpsEnabled, (v) => setState(() => gpsEnabled = v)),
-                        Divider(height: 1, color: _C.stroke),
+                        Divider(height: 1, color: AppColors.stroke),
                         _toggleRow(Icons.record_voice_over_rounded, 'Sesli Rehber',
                             voiceGuidanceEnabled, (v) => setState(() => voiceGuidanceEnabled = v)),
                       ]),
 
                       const SizedBox(height: 20),
 
-                      // ── Hesap ─────────────────────────────────────────
+                      // ── Hesap
                       const Padding(
                         padding: EdgeInsets.only(left: 4, bottom: 10),
                         child: Text('HESAP',
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-                                color: _C.textLight, letterSpacing: 1.0)),
+                                color: AppColors.textLight, letterSpacing: 1.0)),
                       ),
                       _settingsCard([
                         _infoRow(Icons.person_rounded, 'Kullanıcı Adı', _username),
-                        Divider(height: 1, color: _C.stroke),
+                        Divider(height: 1, color: AppColors.stroke),
                         _infoRow(Icons.business_rounded, 'Kurum', 'Tekirdağ Şehir Hastanesi'),
-                        Divider(height: 1, color: _C.stroke),
+                        Divider(height: 1, color: AppColors.stroke),
                         _infoRow(Icons.info_outline_rounded, 'Versiyon', 'v1.0.0'),
                       ]),
 
                       const SizedBox(height: 24),
 
-                      // Çıkış butonu
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton.icon(
@@ -271,8 +255,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           label: const Text('Çıkış Yap',
                               style: TextStyle(fontWeight: FontWeight.w600)),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: _C.error,
-                            side: const BorderSide(color: _C.error, width: 1.5),
+                            foregroundColor: AppColors.error,
+                            side: const BorderSide(color: AppColors.error, width: 1.5),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
@@ -293,10 +277,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _summaryRow(IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: _C.textLight),
+        Icon(icon, size: 18, color: AppColors.textLight),
         const SizedBox(width: 10),
-        Expanded(child: Text(label, style: const TextStyle(fontSize: 13, color: _C.textMid))),
-        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _C.textDark)),
+        Expanded(child: Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textMid))),
+        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
       ],
     );
   }
@@ -304,9 +288,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _settingsCard(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: _C.surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _C.stroke),
+        border: Border.all(color: AppColors.stroke),
       ),
       child: Column(children: children),
     );
@@ -317,15 +301,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: _C.textMid),
+          Icon(icon, size: 20, color: AppColors.textMid),
           const SizedBox(width: 12),
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 14, color: _C.textDark))),
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 14, color: AppColors.textDark))),
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: _C.accent,
-            activeTrackColor: _C.accent.withOpacity(0.3),
-            inactiveTrackColor: _C.stroke,
+            activeThumbColor: AppColors.accent,
+            activeTrackColor: AppColors.accent.withValues(alpha: 0.3),
+            inactiveTrackColor: AppColors.stroke,
           ),
         ],
       ),
@@ -337,10 +321,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: _C.textMid),
+          Icon(icon, size: 20, color: AppColors.textMid),
           const SizedBox(width: 12),
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 14, color: _C.textDark))),
-          Text(value, style: const TextStyle(fontSize: 13, color: _C.textLight, fontWeight: FontWeight.w500)),
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 14, color: AppColors.textDark))),
+          Text(value, style: const TextStyle(fontSize: 13, color: AppColors.textLight, fontWeight: FontWeight.w500)),
         ],
       ),
     );

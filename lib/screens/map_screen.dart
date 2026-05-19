@@ -7,19 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../services/route_provider.dart';
 import '../models/address_model.dart';
-
-class _C {
-  static const bg        = Color(0xFFF0F4F8);
-  static const surface   = Color(0xFFFFFFFF);
-  static const accent    = Color(0xFF53D6FF);
-  static const accentDark= Color(0xFF0D47A1);
-  static const textDark  = Color(0xFF1A2236);
-  static const textMid   = Color(0xFF5A6A85);
-  static const textLight = Color(0xFF9DAFC8);
-  static const stroke    = Color(0xFFE2E8F0);
-  static const success   = Color(0xFF22C55E);
-  static const warning   = Color(0xFFF59E0B);
-}
+import '../theme/app_colors.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({Key? key}) : super(key: key);
@@ -137,7 +125,7 @@ class _MapScreenState extends State<MapScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Adres rotaya eklendi'),
-        backgroundColor: _C.success,
+        backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         margin: const EdgeInsets.all(12),
@@ -176,7 +164,7 @@ class _MapScreenState extends State<MapScreen> {
                     polylines: [
                       Polyline(
                         points: addresses.map((a) => LatLng(a.latitude, a.longitude)).toList(),
-                        color: _C.accent.withOpacity(0.8),
+                        color: AppColors.accent.withValues(alpha: 0.8),
                         strokeWidth: 3,
                       ),
                     ],
@@ -196,16 +184,30 @@ class _MapScreenState extends State<MapScreen> {
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               decoration: BoxDecoration(
-                                color: a.isCompleted ? _C.success : isSelected ? _C.accentDark : _C.accent,
+                                color: a.isCompleted
+                                    ? AppColors.success
+                                    : isSelected
+                                        ? AppColors.primaryDark
+                                        : AppColors.accent,
                                 shape: BoxShape.circle,
                                 border: Border.all(color: Colors.white, width: 2.5),
-                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 6, offset: const Offset(0, 3))],
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  )
+                                ],
                               ),
                               child: Center(
                                 child: a.isCompleted
                                     ? const Icon(Icons.check, color: Colors.white, size: 16)
                                     : Text('${i + 1}',
-                                        style: TextStyle(color: Colors.white, fontSize: isSelected ? 16 : 13, fontWeight: FontWeight.bold)),
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: isSelected ? 16 : 13,
+                                          fontWeight: FontWeight.bold,
+                                        )),
                               ),
                             ),
                           ),
@@ -217,10 +219,16 @@ class _MapScreenState extends State<MapScreen> {
                           width: 44, height: 44,
                           child: Container(
                             decoration: BoxDecoration(
-                              color: _C.warning,
+                              color: AppColors.warning,
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 2.5),
-                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 6, offset: const Offset(0, 3))],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 3),
+                                )
+                              ],
                             ),
                             child: const Icon(Icons.add, color: Colors.white, size: 22),
                           ),
@@ -241,12 +249,17 @@ class _MapScreenState extends State<MapScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
-                            color: _C.surface,
+                            color: AppColors.surface,
                             borderRadius: BorderRadius.circular(12),
-                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)],
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 8,
+                              )
+                            ],
                           ),
                           child: const Text('Harita',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _C.textDark)),
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                         ),
                         const Spacer(),
                         _mapButton(Icons.fit_screen_rounded, () => _mapController.move(center, 12)),
@@ -264,7 +277,7 @@ class _MapScreenState extends State<MapScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: _C.textDark.withOpacity(0.75),
+                        color: AppColors.textDark.withValues(alpha: 0.75),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Row(
@@ -301,8 +314,11 @@ class _MapScreenState extends State<MapScreen> {
                   bottom: 0, left: 0, right: 0,
                   child: Container(
                     decoration: const BoxDecoration(
-                      color: _C.surface,
-                      borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
                       boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 16, offset: Offset(0, -4))],
                     ),
                     child: Column(
@@ -311,7 +327,10 @@ class _MapScreenState extends State<MapScreen> {
                         Container(
                           margin: const EdgeInsets.only(top: 12),
                           width: 40, height: 4,
-                          decoration: BoxDecoration(color: _C.stroke, borderRadius: BorderRadius.circular(2)),
+                          decoration: BoxDecoration(
+                            color: AppColors.stroke,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                         Padding(
                           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -329,17 +348,20 @@ class _MapScreenState extends State<MapScreen> {
                   child: Container(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                     decoration: const BoxDecoration(
-                      color: _C.surface,
-                      borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
                       boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 16, offset: Offset(0, -4))],
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         _bottomStat('${addresses.length}', 'Adres'),
-                        Container(width: 1, height: 32, color: _C.stroke),
+                        Container(width: 1, height: 32, color: AppColors.stroke),
                         _bottomStat('${provider.completedStops}', 'Tamamlandı'),
-                        Container(width: 1, height: 32, color: _C.stroke),
+                        Container(width: 1, height: 32, color: AppColors.stroke),
                         _bottomStat('44.7 km', 'Mesafe'),
                       ],
                     ),
@@ -361,14 +383,16 @@ class _MapScreenState extends State<MapScreen> {
             Container(
               width: 36, height: 36,
               decoration: BoxDecoration(
-                color: address.isCompleted ? _C.success.withOpacity(0.12) : _C.accent.withOpacity(0.12),
+                color: address.isCompleted
+                    ? AppColors.success.withValues(alpha: 0.12)
+                    : AppColors.accent.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: Center(
                 child: address.isCompleted
-                    ? const Icon(Icons.check, color: _C.success, size: 18)
+                    ? const Icon(Icons.check, color: AppColors.success, size: 18)
                     : Text('${_selectedIndex! + 1}',
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: _C.accent)),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.accent)),
               ),
             ),
             const SizedBox(width: 12),
@@ -377,10 +401,10 @@ class _MapScreenState extends State<MapScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(address.customerName,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _C.textDark)),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                   const SizedBox(height: 2),
                   Text('${address.street}, ${address.district}',
-                      style: const TextStyle(fontSize: 13, color: _C.textMid)),
+                      style: const TextStyle(fontSize: 13, color: AppColors.textMid)),
                 ],
               ),
             ),
@@ -395,7 +419,7 @@ class _MapScreenState extends State<MapScreen> {
             icon: const Icon(Icons.navigation_rounded, size: 18),
             label: const Text('Navigasyonu Başlat'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _C.accentDark,
+              backgroundColor: AppColors.primaryDark,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 13),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -415,8 +439,11 @@ class _MapScreenState extends State<MapScreen> {
           children: [
             Container(
               width: 36, height: 36,
-              decoration: BoxDecoration(color: _C.warning.withOpacity(0.12), shape: BoxShape.circle),
-              child: const Icon(Icons.add_location_alt_rounded, color: _C.warning, size: 20),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.add_location_alt_rounded, color: AppColors.warning, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -424,21 +451,27 @@ class _MapScreenState extends State<MapScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Yeni Adres',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _C.textDark)),
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                   const SizedBox(height: 2),
                   _isGeocoding
                       ? const Row(children: [
-                          SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5, color: _C.textLight)),
+                          SizedBox(
+                            width: 12, height: 12,
+                            child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.textLight),
+                          ),
                           SizedBox(width: 6),
-                          Text('Adres aranıyor...', style: TextStyle(fontSize: 12, color: _C.textLight)),
+                          Text('Adres aranıyor...', style: TextStyle(fontSize: 12, color: AppColors.textLight)),
                         ])
                       : Text(_pendingAddressText ?? 'Konum seçildi',
-                          style: const TextStyle(fontSize: 13, color: _C.textMid),
+                          style: const TextStyle(fontSize: 13, color: AppColors.textMid),
                           maxLines: 2, overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),
-            _mapButton(Icons.close_rounded, () => setState(() { _pendingPin = null; _pendingAddressText = null; })),
+            _mapButton(Icons.close_rounded, () => setState(() {
+              _pendingPin = null;
+              _pendingAddressText = null;
+            })),
           ],
         ),
         const SizedBox(height: 16),
@@ -448,8 +481,8 @@ class _MapScreenState extends State<MapScreen> {
               child: OutlinedButton(
                 onPressed: () => setState(() { _pendingPin = null; _pendingAddressText = null; }),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: _C.textMid,
-                  side: const BorderSide(color: _C.stroke),
+                  foregroundColor: AppColors.textMid,
+                  side: const BorderSide(color: AppColors.stroke),
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
@@ -464,9 +497,9 @@ class _MapScreenState extends State<MapScreen> {
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: const Text('Rotaya Ekle'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _C.accentDark,
+                  backgroundColor: AppColors.primaryDark,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: _C.stroke,
+                  disabledBackgroundColor: AppColors.stroke,
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   elevation: 0,
@@ -485,11 +518,16 @@ class _MapScreenState extends State<MapScreen> {
       child: Container(
         width: 40, height: 40,
         decoration: BoxDecoration(
-          color: _C.surface,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(10),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 8,
+            )
+          ],
         ),
-        child: Icon(icon, size: 20, color: _C.textDark),
+        child: Icon(icon, size: 20, color: AppColors.textDark),
       ),
     );
   }
@@ -498,9 +536,9 @@ class _MapScreenState extends State<MapScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _C.textDark)),
+        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(fontSize: 11, color: _C.textLight)),
+        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
       ],
     );
   }

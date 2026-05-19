@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../theme/app_colors.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -58,7 +59,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D47A1),
+      backgroundColor: AppColors.primaryDark,
       body: Stack(
         children: [
           // Arka plan dekorasyon
@@ -70,7 +71,7 @@ class _SplashScreenState extends State<SplashScreen>
               height: 280,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.04),
+                color: Colors.white.withValues(alpha: 0.04),
               ),
             ),
           ),
@@ -82,7 +83,7 @@ class _SplashScreenState extends State<SplashScreen>
               height: 220,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.04),
+                color: Colors.white.withValues(alpha: 0.04),
               ),
             ),
           ),
@@ -94,7 +95,7 @@ class _SplashScreenState extends State<SplashScreen>
               height: 140,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF53D6FF).withOpacity(0.08),
+                color: AppColors.accent.withValues(alpha: 0.08),
               ),
             ),
           ),
@@ -116,17 +117,17 @@ class _SplashScreenState extends State<SplashScreen>
                           width: 96,
                           height: 96,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.12),
+                            color: Colors.white.withValues(alpha: 0.12),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               width: 1.5,
                             ),
                           ),
                           child: const Icon(
                             Icons.route_rounded,
                             size: 48,
-                            color: Color(0xFF53D6FF),
+                            color: AppColors.accent,
                           ),
                         ),
                         const SizedBox(height: 28),
@@ -151,7 +152,7 @@ class _SplashScreenState extends State<SplashScreen>
                           child: Text(
                             'Tekirdağ Şehir Hastanesi',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.6),
+                              color: Colors.white.withValues(alpha: 0.6),
                               fontSize: 14,
                               fontWeight: FontWeight.w400,
                               letterSpacing: 0.3,
@@ -184,7 +185,7 @@ class _SplashScreenState extends State<SplashScreen>
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor: AlwaysStoppedAnimation(
-                            Colors.white.withOpacity(0.5),
+                            Colors.white.withValues(alpha: 0.5),
                           ),
                         ),
                       ),
@@ -192,7 +193,7 @@ class _SplashScreenState extends State<SplashScreen>
                       Text(
                         'Palyatif Bakım Birimi',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.35),
+                          color: Colors.white.withValues(alpha: 0.35),
                           fontSize: 12,
                           letterSpacing: 0.5,
                         ),

@@ -33,7 +33,7 @@ class _AddressCardState extends State<AddressCard> {
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isCompleted ? const Color(0xFFF0F0F0) : Colors.white,
+        color: isCompleted ? AppColors.bgLight : AppColors.surface,
         border: Border.all(color: AppColors.border),
         borderRadius: BorderRadius.circular(12),
       ),
@@ -45,7 +45,7 @@ class _AddressCardState extends State<AddressCard> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: isCompleted ? AppColors.success : AppColors.primary,
+              color: isCompleted ? AppColors.success : AppColors.primaryDark,
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -89,7 +89,7 @@ class _AddressCardState extends State<AddressCard> {
                   widget.address.customerType,
                   style: const TextStyle(
                     fontSize: 10,
-                    color: Color(0xFF999999),
+                    color: AppColors.textMid,
                   ),
                 ),
               ],

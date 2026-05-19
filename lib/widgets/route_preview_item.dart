@@ -32,7 +32,7 @@ class RoutePreviewItem extends StatelessWidget {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: AppColors.primary,
+              color: AppColors.primaryDark,
               shape: BoxShape.circle,
             ),
             child: Center(

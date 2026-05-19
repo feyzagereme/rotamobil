@@ -20,7 +20,7 @@ class StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: backgroundColor ?? Colors.white.withOpacity(0.15),
+        color: backgroundColor ?? Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(AppTheme.borderRadiusMd),
       ),
       child: Column(
@@ -39,19 +39,11 @@ class StatCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 10,
-              color: Colors.white,
-            ),
+            style: const TextStyle(fontSize: 10, color: Colors.white),
             textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
-}
-
-class AppTheme {
-  static const double borderRadius = 12.0;
-  static const double borderRadiusMd = 8.0;
 }

@@ -1,14 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-class _C {
-  static const accentDark = Color(0xFF0D47A1);
-  static const accent     = Color(0xFF53D6FF);
-  static const textDark   = Color(0xFF1A2236);
-  static const textMid    = Color(0xFF5A6A85);
-  static const textLight  = Color(0xFF9DAFC8);
-  static const stroke     = Color(0xFFE2E8F0);
-}
+import '../theme/app_colors.dart';
 
 class _Slide {
   final IconData icon;
@@ -136,7 +128,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     child: Text(
                       'Atla',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.6),
+                        color: Colors.white.withValues(alpha: 0.6),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -165,10 +157,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                               width: 120,
                               height: 120,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.1),
+                                color: Colors.white.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: s.iconColor.withOpacity(0.3),
+                                  color: s.iconColor.withValues(alpha: 0.3),
                                   width: 1.5,
                                 ),
                               ),
@@ -194,7 +186,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                               s.description,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.65),
+                                color: Colors.white.withValues(alpha: 0.65),
                                 fontSize: 15,
                                 height: 1.6,
                               ),
@@ -224,8 +216,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           height: 8,
                           decoration: BoxDecoration(
                             color: isActive
-                                ? _C.accent
-                                : Colors.white.withOpacity(0.3),
+                                ? AppColors.accent
+                                : Colors.white.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         );
@@ -239,8 +231,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       child: ElevatedButton(
                         onPressed: _nextPage,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _C.accent,
-                          foregroundColor: _C.accentDark,
+                          backgroundColor: AppColors.accent,
+                          foregroundColor: AppColors.primaryDark,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),

@@ -6,20 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/address_model.dart';
 import '../services/route_provider.dart';
-
-class _C {
-  static const bg        = Color(0xFFF0F4F8);
-  static const surface   = Color(0xFFFFFFFF);
-  static const accent    = Color(0xFF53D6FF);
-  static const accentDark= Color(0xFF0D47A1);
-  static const textDark  = Color(0xFF1A2236);
-  static const textMid   = Color(0xFF5A6A85);
-  static const textLight = Color(0xFF9DAFC8);
-  static const stroke    = Color(0xFFE2E8F0);
-  static const success   = Color(0xFF22C55E);
-  static const error     = Color(0xFFE53935);
-  static const warning   = Color(0xFFF59E0B);
-}
+import '../theme/app_colors.dart';
 
 class AddressDetailScreen extends StatefulWidget {
   final Address address;
@@ -77,11 +64,10 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
     context.read<RouteProvider>().toggleCompleted(widget.index);
 
     if (!_isCompleted) {
-      // Tamamlandı geri alındı
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Ziyaret tamamlanmadı olarak işaretlendi'),
-          backgroundColor: _C.warning,
+          backgroundColor: AppColors.warning,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(12),
@@ -98,7 +84,7 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
               Text('Ziyaret tamamlandı olarak işaretlendi'),
             ],
           ),
-          backgroundColor: _C.success,
+          backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(12),
@@ -113,14 +99,13 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
     final address = widget.address;
 
     return Scaffold(
-      backgroundColor: _C.bg,
+      backgroundColor: AppColors.bgLight,
       body: CustomScrollView(
         slivers: [
-          // ── Harita + App Bar ──────────────────────────────────────────
           SliverAppBar(
             expandedHeight: 220,
             pinned: true,
-            backgroundColor: _C.accentDark,
+            backgroundColor: AppColors.primaryDark,
             foregroundColor: Colors.white,
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
@@ -146,12 +131,12 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                             height: 48,
                             child: Container(
                               decoration: BoxDecoration(
-                                color: _isCompleted ? _C.success : _C.accentDark,
+                                color: _isCompleted ? AppColors.success : AppColors.primaryDark,
                                 shape: BoxShape.circle,
                                 border: Border.all(color: Colors.white, width: 3),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.3),
+                                    color: Colors.black.withValues(alpha: 0.3),
                                     blurRadius: 8,
                                     offset: const Offset(0, 4),
                                   ),
@@ -175,17 +160,16 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                       ),
                     ],
                   ),
-                  // Hafif karartma
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          _C.accentDark.withOpacity(0.4),
+                          AppColors.primaryDark.withValues(alpha: 0.4),
                           Colors.transparent,
                           Colors.transparent,
-                          _C.accentDark.withOpacity(0.3),
+                          AppColors.primaryDark.withValues(alpha: 0.3),
                         ],
                       ),
                     ),
@@ -208,13 +192,12 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Başlık kartı ────────────────────────────────────────
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: _C.surface,
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: _C.stroke),
+                      border: Border.all(color: AppColors.stroke),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,29 +213,28 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                                     style: const TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w800,
-                                      color: _C.textDark,
+                                      color: AppColors.textDark,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     address.customerType,
-                                    style: const TextStyle(fontSize: 13, color: _C.textLight),
+                                    style: const TextStyle(fontSize: 13, color: AppColors.textLight),
                                   ),
                                 ],
                               ),
                             ),
-                            // Durum badge
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: _isCompleted
-                                    ? _C.success.withOpacity(0.1)
-                                    : _C.accent.withOpacity(0.1),
+                                    ? AppColors.success.withValues(alpha: 0.1)
+                                    : AppColors.accent.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: _isCompleted
-                                      ? _C.success.withOpacity(0.3)
-                                      : _C.accent.withOpacity(0.3),
+                                      ? AppColors.success.withValues(alpha: 0.3)
+                                      : AppColors.accent.withValues(alpha: 0.3),
                                 ),
                               ),
                               child: Row(
@@ -263,7 +245,7 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                                         ? Icons.check_circle_rounded
                                         : Icons.radio_button_unchecked_rounded,
                                     size: 14,
-                                    color: _isCompleted ? _C.success : _C.accent,
+                                    color: _isCompleted ? AppColors.success : AppColors.accent,
                                   ),
                                   const SizedBox(width: 5),
                                   Text(
@@ -271,7 +253,7 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: _isCompleted ? _C.success : _C.accent,
+                                      color: _isCompleted ? AppColors.success : AppColors.accent,
                                     ),
                                   ),
                                 ],
@@ -280,10 +262,8 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        Divider(color: _C.stroke, height: 1),
+                        Divider(color: AppColors.stroke, height: 1),
                         const SizedBox(height: 16),
-
-                        // Sıra numarası
                         _infoRow(Icons.format_list_numbered_rounded, 'Rota Sırası', '#${widget.index + 1}'),
                         const SizedBox(height: 12),
                         _infoRow(Icons.location_on_rounded, 'Adres', address.fullAddress),
@@ -295,46 +275,29 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // ── Hızlı aksiyonlar ────────────────────────────────────
                   Row(
                     children: [
                       Expanded(
-                        child: _actionCard(
-                          Icons.navigation_rounded,
-                          'Navigasyon',
-                          _C.accentDark,
-                          _launchNavigation,
-                        ),
+                        child: _actionCard(Icons.navigation_rounded, 'Navigasyon', AppColors.primaryDark, _launchNavigation),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: _actionCard(
-                          Icons.call_rounded,
-                          'Ara',
-                          _C.textMid,
-                          () => _launchCall('+90 532 000 00 00'),
-                        ),
+                        child: _actionCard(Icons.call_rounded, 'Ara', AppColors.textMid, () => _launchCall('+90 532 000 00 00')),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: _actionCard(
-                          Icons.share_rounded,
-                          'Paylaş',
-                          _C.textMid,
-                          () {},
-                        ),
+                        child: _actionCard(Icons.share_rounded, 'Paylaş', AppColors.textMid, () {}),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
 
-                  // ── Notlar ──────────────────────────────────────────────
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: _C.surface,
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: _C.stroke),
+                      border: Border.all(color: AppColors.stroke),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -344,17 +307,17 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                           children: [
                             const Row(
                               children: [
-                                Icon(Icons.notes_rounded, size: 18, color: _C.textMid),
+                                Icon(Icons.notes_rounded, size: 18, color: AppColors.textMid),
                                 SizedBox(width: 8),
                                 Text('Notlar',
-                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _C.textDark)),
+                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                               ],
                             ),
                             GestureDetector(
                               onTap: () => setState(() => _editingNote = !_editingNote),
                               child: Text(
                                 _editingNote ? 'Kaydet' : 'Düzenle',
-                                style: const TextStyle(fontSize: 13, color: _C.accent, fontWeight: FontWeight.w600),
+                                style: const TextStyle(fontSize: 13, color: AppColors.accent, fontWeight: FontWeight.w600),
                               ),
                             ),
                           ],
@@ -365,29 +328,27 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                                 controller: _noteController,
                                 maxLines: 4,
                                 autofocus: true,
-                                style: const TextStyle(fontSize: 14, color: _C.textDark),
+                                style: const TextStyle(fontSize: 14, color: AppColors.textDark),
                                 decoration: InputDecoration(
                                   hintText: 'Not ekleyin...',
-                                  hintStyle: const TextStyle(color: _C.textLight),
+                                  hintStyle: const TextStyle(color: AppColors.textLight),
                                   filled: true,
-                                  fillColor: _C.bg,
+                                  fillColor: AppColors.bgLight,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: BorderSide.none,
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(color: _C.accent, width: 1.5),
+                                    borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
                                   ),
                                 ),
                               )
                             : Text(
-                                _noteController.text.isNotEmpty
-                                    ? _noteController.text
-                                    : 'Not eklenmemiş.',
+                                _noteController.text.isNotEmpty ? _noteController.text : 'Not eklenmemiş.',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: _noteController.text.isNotEmpty ? _C.textMid : _C.textLight,
+                                  color: _noteController.text.isNotEmpty ? AppColors.textMid : AppColors.textLight,
                                   fontStyle: _noteController.text.isEmpty ? FontStyle.italic : null,
                                 ),
                               ),
@@ -396,7 +357,6 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Ziyaret tamamla butonu ──────────────────────────────
                   SizedBox(
                     width: double.infinity,
                     child: AnimatedContainer(
@@ -404,9 +364,7 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                       child: ElevatedButton.icon(
                         onPressed: _toggleCompleted,
                         icon: Icon(
-                          _isCompleted
-                              ? Icons.cancel_outlined
-                              : Icons.check_circle_rounded,
+                          _isCompleted ? Icons.cancel_outlined : Icons.check_circle_rounded,
                           size: 20,
                         ),
                         label: Text(
@@ -414,7 +372,7 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _isCompleted ? _C.textLight : _C.success,
+                          backgroundColor: _isCompleted ? AppColors.textLight : AppColors.success,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -437,15 +395,15 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: _C.textLight),
+        Icon(icon, size: 18, color: AppColors.textLight),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(fontSize: 11, color: _C.textLight, fontWeight: FontWeight.w600)),
+              Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textLight, fontWeight: FontWeight.w600)),
               const SizedBox(height: 2),
-              Text(value, style: const TextStyle(fontSize: 13, color: _C.textDark)),
+              Text(value, style: const TextStyle(fontSize: 13, color: AppColors.textDark)),
             ],
           ),
         ),
@@ -459,9 +417,9 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: _C.surface,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _C.stroke),
+          border: Border.all(color: AppColors.stroke),
         ),
         child: Column(
           children: [
