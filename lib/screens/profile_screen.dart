@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/mock_data_service.dart';
+import '../services/route_provider.dart';
 import '../models/driver_model.dart';
-import '../models/route_model.dart' as route_models;
 import '../theme/app_colors.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -14,7 +15,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late Driver driver;
-  late route_models.Route todayRoute;
   late bool notificationsEnabled;
   late bool gpsEnabled;
   late bool voiceGuidanceEnabled;
@@ -24,7 +24,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     driver = MockDataService.getMockDriver();
-    todayRoute = MockDataService.getTodayRoute();
     notificationsEnabled = driver.notificationsEnabled;
     gpsEnabled = driver.gpsEnabled;
     voiceGuidanceEnabled = driver.voiceGuidanceEnabled;
@@ -63,210 +62,208 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
-
     if (confirm == true) {
       await AuthService.logout();
       if (mounted) Navigator.of(context).pushReplacementNamed('/login');
     }
   }
 
-  String _todayDate() {
-    final now = DateTime.now();
-    const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran',
-                    'Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
-    return '${now.day} ${months[now.month - 1]} ${now.year}';
-  }
-
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<RouteProvider>();
     final initials = _username.isNotEmpty ? _username[0].toUpperCase() : 'M';
-    final completed = todayRoute.completedStops;
-    final total = todayRoute.totalStops;
-    final pct = todayRoute.completionPercentage;
+    final completed = provider.completedStops;
+    final total = provider.totalStops;
+    final pct = provider.completionPercentage;
 
     return Scaffold(
-      backgroundColor: AppColors.bgLight,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            backgroundColor: AppColors.surface,
-            surfaceTintColor: Colors.transparent,
-            elevation: 0,
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(1),
-              child: Container(height: 1, color: AppColors.stroke),
+      backgroundColor: const Color(0xFF0D47A1),
+      body: Column(
+        children: [
+          // ── Mavi header
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              child: Row(
+                children: [
+                  // Avatar
+                  Container(
+                    width: 64, height: 64,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+                    ),
+                    child: Center(
+                      child: Text(initials,
+                          style: const TextStyle(
+                              fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white)),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_username,
+                            style: const TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white)),
+                        const SizedBox(height: 3),
+                        Text('Rota Sürücüsü',
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.white.withValues(alpha: 0.65))),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.success.withValues(alpha: 0.4)),
+                          ),
+                          child: const Text('● Aktif',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            title: const Text('Profil',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textDark)),
           ),
 
-          SliverToBoxAdapter(
-            child: Column(
-              children: [
-                // ── Profil başlığı
-                Container(
-                  color: AppColors.surface,
-                  padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 60, height: 60,
-                        decoration: BoxDecoration(
-                          color: AppColors.accent.withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.stroke, width: 1.5),
-                        ),
-                        child: Center(
-                          child: Text(initials,
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(_username,
-                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                            const SizedBox(height: 3),
-                            const Text('Rota Sürücüsü',
-                                style: TextStyle(fontSize: 13, color: AppColors.textLight)),
-                            const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.success.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Text('● Aktif',
-                                  style: TextStyle(fontSize: 11, color: AppColors.success, fontWeight: FontWeight.w600)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+          // ── İçerik
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF0F4F8),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
                 ),
-
-                const SizedBox(height: 12),
-
-                // ── Bugünün Özeti
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4, bottom: 10),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('BUGÜNÜN ÖZETİ',
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-                                    color: AppColors.textLight, letterSpacing: 1.0)),
-                            Text(_todayDate(),
-                                style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
-                          ],
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Bugünün özeti kartı
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0D47A1), Color(0xFF1565C0)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.stroke),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('$completed / $total adres tamamlandı',
-                                    style: const TextStyle(fontSize: 13, color: AppColors.textMid)),
-                                Text('%${pct.toStringAsFixed(0)}',
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: LinearProgressIndicator(
-                                value: pct / 100,
-                                minHeight: 6,
-                                backgroundColor: AppColors.stroke,
-                                valueColor: AlwaysStoppedAnimation(pct == 100 ? AppColors.success : AppColors.accent),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _summaryRow(Icons.straighten_rounded, 'Toplam Mesafe', '${todayRoute.totalDistance.toStringAsFixed(1)} km'),
-                            Divider(height: 20, color: AppColors.stroke),
-                            _summaryRow(Icons.timer_rounded, 'Tahmini Süre', '2 saat 30 dk'),
-                            Divider(height: 20, color: AppColors.stroke),
-                            _summaryRow(Icons.route_rounded, 'Toplam Rota', '${driver.totalRoutes} rota'),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // ── Ayarlar
-                      const Padding(
-                        padding: EdgeInsets.only(left: 4, bottom: 10),
-                        child: Text('AYARLAR',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-                                color: AppColors.textLight, letterSpacing: 1.0)),
-                      ),
-                      _settingsCard([
-                        _toggleRow(Icons.notifications_rounded, 'Bildirimler',
-                            notificationsEnabled, (v) => setState(() => notificationsEnabled = v)),
-                        Divider(height: 1, color: AppColors.stroke),
-                        _toggleRow(Icons.gps_fixed_rounded, 'GPS Konum Takibi',
-                            gpsEnabled, (v) => setState(() => gpsEnabled = v)),
-                        Divider(height: 1, color: AppColors.stroke),
-                        _toggleRow(Icons.record_voice_over_rounded, 'Sesli Rehber',
-                            voiceGuidanceEnabled, (v) => setState(() => voiceGuidanceEnabled = v)),
-                      ]),
-
-                      const SizedBox(height: 20),
-
-                      // ── Hesap
-                      const Padding(
-                        padding: EdgeInsets.only(left: 4, bottom: 10),
-                        child: Text('HESAP',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-                                color: AppColors.textLight, letterSpacing: 1.0)),
-                      ),
-                      _settingsCard([
-                        _infoRow(Icons.person_rounded, 'Kullanıcı Adı', _username),
-                        Divider(height: 1, color: AppColors.stroke),
-                        _infoRow(Icons.business_rounded, 'Kurum', 'Tekirdağ Şehir Hastanesi'),
-                        Divider(height: 1, color: AppColors.stroke),
-                        _infoRow(Icons.info_outline_rounded, 'Versiyon', 'v1.0.0'),
-                      ]),
-
-                      const SizedBox(height: 24),
-
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: _logout,
-                          icon: const Icon(Icons.logout_rounded, size: 18),
-                          label: const Text('Çıkış Yap',
-                              style: TextStyle(fontWeight: FontWeight.w600)),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.error,
-                            side: const BorderSide(color: AppColors.error, width: 1.5),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0D47A1).withValues(alpha: 0.3),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
                           ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Bugünün Özeti',
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.white.withValues(alpha: 0.8),
+                                      fontWeight: FontWeight.w600)),
+                              Text('%${pct.toStringAsFixed(0)}',
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF53D6FF),
+                                      fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: LinearProgressIndicator(
+                              value: total == 0 ? 0 : pct / 100,
+                              minHeight: 6,
+                              backgroundColor: Colors.white.withValues(alpha: 0.15),
+                              valueColor: AlwaysStoppedAnimation(
+                                pct == 100 ? AppColors.success : const Color(0xFF53D6FF),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              _miniStat('$completed', 'Tamamlanan', AppColors.success),
+                              const SizedBox(width: 10),
+                              _miniStat('${total - completed}', 'Kalan', const Color(0xFF53D6FF)),
+                              const SizedBox(width: 10),
+                              _miniStat('$total', 'Toplam', Colors.white),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // ── Ayarlar
+                    _sectionLabel('AYARLAR'),
+                    const SizedBox(height: 10),
+                    _card([
+                      _toggleRow(Icons.notifications_rounded, 'Bildirimler',
+                          notificationsEnabled, (v) => setState(() => notificationsEnabled = v)),
+                      _divider(),
+                      _toggleRow(Icons.gps_fixed_rounded, 'GPS Konum Takibi',
+                          gpsEnabled, (v) => setState(() => gpsEnabled = v)),
+                      _divider(),
+                      _toggleRow(Icons.record_voice_over_rounded, 'Sesli Rehber',
+                          voiceGuidanceEnabled, (v) => setState(() => voiceGuidanceEnabled = v)),
+                    ]),
+
+                    const SizedBox(height: 20),
+
+                    // ── Hesap
+                    _sectionLabel('HESAP'),
+                    const SizedBox(height: 10),
+                    _card([
+                      _infoRow(Icons.person_rounded, 'Kullanıcı Adı', _username),
+                      _divider(),
+                      _infoRow(Icons.business_rounded, 'Kurum', 'Tekirdağ Şehir Hastanesi'),
+                      _divider(),
+                      _infoRow(Icons.local_hospital_rounded, 'Birim', 'Palyatif Bakım'),
+                      _divider(),
+                      _infoRow(Icons.info_outline_rounded, 'Versiyon', 'v1.0.0'),
+                    ]),
+
+                    const SizedBox(height: 24),
+
+                    // ── Çıkış butonu
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _logout,
+                        icon: const Icon(Icons.logout_rounded, size: 18),
+                        label: const Text('Çıkış Yap',
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.error,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                       ),
-                      const SizedBox(height: 32),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -274,42 +271,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _summaryRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: AppColors.textLight),
-        const SizedBox(width: 10),
-        Expanded(child: Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textMid))),
-        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-      ],
+  Widget _miniStat(String value, String label, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value,
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: color)),
+          Text(label,
+              style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.7))),
+        ],
+      ),
     );
   }
 
-  Widget _settingsCard(List<Widget> children) {
+  Widget _sectionLabel(String text) {
+    return Text(text,
+        style: const TextStyle(
+            fontSize: 11, fontWeight: FontWeight.w700,
+            color: AppColors.textLight, letterSpacing: 1.2));
+  }
+
+  Widget _card(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.stroke),
       ),
       child: Column(children: children),
     );
   }
 
+  Widget _divider() => Divider(height: 1, color: AppColors.stroke, indent: 16, endIndent: 16);
+
   Widget _toggleRow(IconData icon, String label, bool value, Function(bool) onChanged) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: AppColors.textMid),
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0D47A1).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: const Color(0xFF0D47A1)),
+          ),
           const SizedBox(width: 12),
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 14, color: AppColors.textDark))),
+          Expanded(child: Text(label,
+              style: const TextStyle(fontSize: 14, color: AppColors.textDark))),
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: AppColors.accent,
-            activeTrackColor: AppColors.accent.withValues(alpha: 0.3),
-            inactiveTrackColor: AppColors.stroke,
+            activeColor: const Color(0xFF53D6FF),
+            activeTrackColor: const Color(0xFF53D6FF).withValues(alpha: 0.3),
           ),
         ],
       ),
@@ -321,10 +336,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: AppColors.textMid),
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0D47A1).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: const Color(0xFF0D47A1)),
+          ),
           const SizedBox(width: 12),
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 14, color: AppColors.textDark))),
-          Text(value, style: const TextStyle(fontSize: 13, color: AppColors.textLight, fontWeight: FontWeight.w500)),
+          Expanded(child: Text(label,
+              style: const TextStyle(fontSize: 14, color: AppColors.textDark))),
+          Text(value,
+              style: const TextStyle(fontSize: 13, color: AppColors.textLight, fontWeight: FontWeight.w500)),
         ],
       ),
     );

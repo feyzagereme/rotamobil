@@ -8,11 +8,11 @@ class AddressCard extends StatefulWidget {
   final bool showCheckbox;
 
   const AddressCard({
-    Key? key,
+    super.key,
     required this.address,
     this.onCheckboxChanged,
     this.showCheckbox = true,
-  }) : super(key: key);
+  });
 
   @override
   State<AddressCard> createState() => _AddressCardState();

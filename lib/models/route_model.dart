@@ -21,10 +21,7 @@ class Route {
     this.isCompleted = false,
   });
 
-  double get totalDistance {
-    // Basit hesaplama - gerçekte lat/lng arası harita API kullanılmalı
-    return 44.7;
-  }
+  double get totalDistance => 0;
 
   int get totalStops => addresses.length;
 
@@ -35,7 +32,7 @@ class Route {
     return (completedStops / addresses.length) * 100;
   }
 
-  String get estimatedTime => '2.5 saat'; // Basit mock
+  String get estimatedTime => '—';
 
   Route copyWith({
     int? id,

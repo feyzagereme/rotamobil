@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -51,8 +52,10 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _guestLogin() {
-    Navigator.of(context).pushReplacementNamed('/home');
+  void _guestLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('user_id', 1);
+    if (mounted) Navigator.of(context).pushReplacementNamed('/home');
   }
 
   @override

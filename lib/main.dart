@@ -3,11 +3,13 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/welcome_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/route_list_screen.dart';
 import 'screens/calendar_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/guest/guest_app.dart';
 import 'services/auth_service.dart';
 import 'services/route_provider.dart';
 import 'theme/app_colors.dart';
@@ -26,7 +28,7 @@ void main() async {
 
 class RotaMobilApp extends StatelessWidget {
   final bool startLoggedIn;
-  const RotaMobilApp({Key? key, required this.startLoggedIn}) : super(key: key);
+  const RotaMobilApp({super.key, required this.startLoggedIn});
 
   @override
   Widget build(BuildContext context) {
@@ -69,15 +71,17 @@ class RotaMobilApp extends StatelessWidget {
       initialRoute: '/splash',
       routes: {
         '/splash': (_) => const SplashScreen(),
+        '/welcome': (_) => const WelcomeScreen(),
         '/login': (_) => const LoginScreen(),
         '/home': (_) => const MainApp(),
+        '/guest': (_) => const GuestApp(),
       },
     );
   }
 }
 
 class MainApp extends StatefulWidget {
-  const MainApp({Key? key}) : super(key: key);
+  const MainApp({super.key});
 
   @override
   State<MainApp> createState() => _MainAppState();

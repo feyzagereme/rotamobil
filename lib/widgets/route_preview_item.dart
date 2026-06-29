@@ -6,9 +6,9 @@ class RoutePreviewItem extends StatelessWidget {
   final Address address;
 
   const RoutePreviewItem({
-    Key? key,
+    super.key,
     required this.address,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

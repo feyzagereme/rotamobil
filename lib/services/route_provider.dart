@@ -59,12 +59,19 @@ class RouteProvider extends ChangeNotifier {
         _addresses = [];
         _activeRouteId = null;
         _activeRouteName = null;
-        _errorMessage = 'Aktif rota bulunamadı.';
+        _errorMessage = null;
         return;
       }
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        _errorMessage = 'Aktif rota alınamadı: ${response.statusCode}';
+        final prefs = await SharedPreferences.getInstance();
+        final isGuest = prefs.getBool('is_guest') ?? true;
+        if (isGuest) {
+          _addresses = [];
+          _errorMessage = null;
+        } else {
+          _loadMockData();
+        }
         return;
       }
 
@@ -96,7 +103,14 @@ class RouteProvider extends ChangeNotifier {
 
       _errorMessage = null;
     } catch (e) {
-      _errorMessage = 'Rota yüklenirken hata oluştu: $e';
+      final prefs = await SharedPreferences.getInstance();
+      final isGuest = prefs.getBool('is_guest') ?? true;
+      if (isGuest) {
+        _addresses = [];
+        _errorMessage = null;
+      } else {
+        _errorMessage = 'Rota yüklenirken hata oluştu: $e';
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -168,6 +182,42 @@ class RouteProvider extends ChangeNotifier {
       _errorMessage = 'Tamamlandı bilgisi gönderilemedi: $e';
       notifyListeners();
     }
+  }
+
+  void _loadMockData() {
+    _activeRouteId = 'mock-1';
+    _activeRouteName = 'Test Rotası';
+    _addresses = [
+      Address(
+        id: 1, orderNumber: 1,
+        street: 'Atatürk Caddesi No:12', district: 'Altındağ', city: 'Tekirdağ',
+        postalCode: '59100', country: 'Türkiye',
+        latitude: 40.9833, longitude: 27.5167,
+        customerName: 'Ahmet Yılmaz', customerType: 'visit',
+      ),
+      Address(
+        id: 2, orderNumber: 2,
+        street: 'Cumhuriyet Sokak No:5', district: 'Süleymanpaşa', city: 'Tekirdağ',
+        postalCode: '59100', country: 'Türkiye',
+        latitude: 40.9800, longitude: 27.5100,
+        customerName: 'Fatma Kaya', customerType: 'visit',
+      ),
+      Address(
+        id: 3, orderNumber: 3,
+        street: 'İnönü Bulvarı No:33', district: 'Ergene', city: 'Tekirdağ',
+        postalCode: '59100', country: 'Türkiye',
+        latitude: 40.9750, longitude: 27.5200,
+        customerName: 'Mehmet Demir', customerType: 'visit',
+      ),
+      Address(
+        id: 4, orderNumber: 4,
+        street: 'Barbaros Mahallesi No:8', district: 'Çorlu', city: 'Tekirdağ',
+        postalCode: '59860', country: 'Türkiye',
+        latitude: 41.1500, longitude: 27.8000,
+        customerName: 'Ayşe Çelik', customerType: 'visit',
+      ),
+    ];
+    _errorMessage = null;
   }
 
   Map<String, dynamic> _asMap(dynamic value) {

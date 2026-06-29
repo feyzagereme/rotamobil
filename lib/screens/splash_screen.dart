@@ -3,7 +3,7 @@ import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -47,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
     final loggedIn = await AuthService.isLoggedIn();
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed(loggedIn ? '/home' : '/login');
+    Navigator.of(context).pushReplacementNamed(loggedIn ? '/home' : '/welcome');
   }
 
   @override
