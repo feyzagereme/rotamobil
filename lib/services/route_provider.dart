@@ -64,14 +64,7 @@ class RouteProvider extends ChangeNotifier {
       }
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        final prefs = await SharedPreferences.getInstance();
-        final isGuest = prefs.getBool('is_guest') ?? true;
-        if (isGuest) {
-          _addresses = [];
-          _errorMessage = null;
-        } else {
-          _loadMockData();
-        }
+        _errorMessage = 'Aktif rota alınamadı: ${response.statusCode}';
         return;
       }
 
