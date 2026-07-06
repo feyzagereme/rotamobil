@@ -49,7 +49,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (_) => _DailyBriefingSheet(provider: provider),
+        builder: (_) => const _DailyBriefingSheet(),
       );
     });
   }
@@ -774,8 +774,7 @@ class _GuideItem {
 
 // ── Günlük Özet Bottom Sheet
 class _DailyBriefingSheet extends StatelessWidget {
-  final RouteProvider provider;
-  const _DailyBriefingSheet({required this.provider});
+  const _DailyBriefingSheet();
 
   String _greeting() {
     final hour = DateTime.now().hour;
@@ -792,157 +791,200 @@ class _DailyBriefingSheet extends StatelessWidget {
     return '${days[now.weekday - 1]}, ${now.day} ${months[now.month - 1]}';
   }
 
+  Future<void> _handleStart(BuildContext context, RouteProvider provider) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    final success = await provider.optimizeRoute();
+
+    if (!context.mounted) return;
+
+    if (success) {
+      navigator.pop();
+      messenger.showSnackBar(SnackBar(
+        content: const Text('Rota, en kısa güzergaha göre sıralandı'),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(12),
+      ));
+    } else {
+      final error = provider.optimizeError ?? 'Rota optimize edilemedi';
+      messenger.showSnackBar(SnackBar(
+        content: Text(error),
+        backgroundColor: AppColors.warning,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(12),
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final total = provider.totalStops;
-    final completed = provider.completedStops;
-    final nextAddress = provider.addresses.where((a) => !a.isCompleted).isNotEmpty
-        ? provider.addresses.firstWhere((a) => !a.isCompleted)
-        : null;
+    return Consumer<RouteProvider>(
+      builder: (context, provider, _) {
+        final total = provider.totalStops;
+        final completed = provider.completedStops;
+        final nextAddress = provider.addresses.where((a) => !a.isCompleted).isNotEmpty
+            ? provider.addresses.firstWhere((a) => !a.isCompleted)
+            : null;
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFF0A1628),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(28),
-          topRight: Radius.circular(28),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Tutamaç
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            width: 40, height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(2),
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF0A1628),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(28),
+              topRight: Radius.circular(28),
             ),
           ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Tutamaç
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
 
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Üst kısım
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    // Üst kısım
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(_greeting(),
-                            style: const TextStyle(
-                                fontSize: 24, fontWeight: FontWeight.w800,
-                                color: Colors.white, letterSpacing: -0.5)),
-                        const SizedBox(height: 4),
-                        Text(_todayFull(),
-                            style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.white.withValues(alpha: 0.5))),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_greeting(),
+                                style: const TextStyle(
+                                    fontSize: 24, fontWeight: FontWeight.w800,
+                                    color: Colors.white, letterSpacing: -0.5)),
+                            const SizedBox(height: 4),
+                            Text(_todayFull(),
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white.withValues(alpha: 0.5))),
+                          ],
+                        ),
+                        Container(
+                          width: 56, height: 56,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF53D6FF).withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: const Color(0xFF53D6FF).withValues(alpha: 0.3)),
+                          ),
+                          child: const Icon(Icons.route_rounded,
+                              color: Color(0xFF53D6FF), size: 26),
+                        ),
                       ],
                     ),
+
+                    const SizedBox(height: 24),
+
+                    // Stat satırları
                     Container(
-                      width: 56, height: 56,
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF53D6FF).withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                            color: const Color(0xFF53D6FF).withValues(alpha: 0.3)),
+                        color: Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                       ),
-                      child: const Icon(Icons.route_rounded,
-                          color: Color(0xFF53D6FF), size: 26),
+                      child: Column(
+                        children: [
+                          _statRow('Toplam Durak', '$total durak', Icons.location_on_rounded, Colors.white),
+                          const SizedBox(height: 12),
+                          _statRow('Tamamlanan', '$completed durak', Icons.check_circle_rounded, AppColors.success),
+                          const SizedBox(height: 12),
+                          _statRow('Kalan', '${total - completed} durak', Icons.pending_rounded, const Color(0xFF53D6FF)),
+                        ],
+                      ),
+                    ),
+
+                    if (nextAddress != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36, height: 36,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF53D6FF).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.navigation_rounded,
+                                  color: Color(0xFF53D6FF), size: 18),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('İlk Durak',
+                                      style: TextStyle(fontSize: 11,
+                                          color: Colors.white.withValues(alpha: 0.5),
+                                          fontWeight: FontWeight.w600)),
+                                  Text(nextAddress.customerName,
+                                      style: const TextStyle(fontSize: 13,
+                                          fontWeight: FontWeight.w700, color: Colors.white)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 20),
+
+                    // Başlat butonu
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: provider.isOptimizing
+                            ? null
+                            : () => _handleStart(context, provider),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF53D6FF),
+                          foregroundColor: const Color(0xFF0A1628),
+                          disabledBackgroundColor:
+                              const Color(0xFF53D6FF).withValues(alpha: 0.5),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
+                        ),
+                        child: provider.isOptimizing
+                            ? const SizedBox(
+                                width: 20, height: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Color(0xFF0A1628)),
+                              )
+                            : const Text('Rotayı Başlat',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                      ),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 24),
-
-                // Stat satırları
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                  ),
-                  child: Column(
-                    children: [
-                      _statRow('Toplam Durak', '$total durak', Icons.location_on_rounded, Colors.white),
-                      const SizedBox(height: 12),
-                      _statRow('Tamamlanan', '$completed durak', Icons.check_circle_rounded, AppColors.success),
-                      const SizedBox(height: 12),
-                      _statRow('Kalan', '${total - completed} durak', Icons.pending_rounded, const Color(0xFF53D6FF)),
-                    ],
-                  ),
-                ),
-
-                if (nextAddress != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 36, height: 36,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF53D6FF).withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.navigation_rounded,
-                              color: Color(0xFF53D6FF), size: 18),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('İlk Durak',
-                                  style: TextStyle(fontSize: 11,
-                                      color: Colors.white.withValues(alpha: 0.5),
-                                      fontWeight: FontWeight.w600)),
-                              Text(nextAddress.customerName,
-                                  style: const TextStyle(fontSize: 13,
-                                      fontWeight: FontWeight.w700, color: Colors.white)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 20),
-
-                // Başlat butonu
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF53D6FF),
-                      foregroundColor: const Color(0xFF0A1628),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                      elevation: 0,
-                    ),
-                    child: const Text('Rotayı Başlat',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

@@ -86,10 +86,10 @@ class Address {
     };
   }
 
-  Address copyWith({bool? isCompleted}) {
+  Address copyWith({bool? isCompleted, int? orderNumber}) {
     return Address(
       id: id,
-      orderNumber: orderNumber,
+      orderNumber: orderNumber ?? this.orderNumber,
       street: street,
       district: district,
       city: city,

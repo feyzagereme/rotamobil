@@ -2,13 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/address_model.dart';
 
 class RouteProvider extends ChangeNotifier {
-  static const String _baseUrl = 'https://route-backend-wkiy.onrender.com';
+  static const String _baseUrl = 'https://route-backend-jeu7.onrender.com';
 
   List<Address> _addresses = [];
   String? _activeRouteId;
@@ -16,6 +17,9 @@ class RouteProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   Timer? _syncTimer;
+
+  bool _isOptimizing = false;
+  String? _optimizeError;
 
   RouteProvider() {
     loadActiveRoute();
@@ -27,6 +31,9 @@ class RouteProvider extends ChangeNotifier {
   String? get activeRouteName => _activeRouteName;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  bool get isOptimizing => _isOptimizing;
+  String? get optimizeError => _optimizeError;
 
   int get totalStops => _addresses.length;
   int get completedStops => _addresses.where((a) => a.isCompleted).length;
@@ -173,6 +180,101 @@ class RouteProvider extends ChangeNotifier {
     } catch (e) {
       _addresses[index] = current;
       _errorMessage = 'Tamamlandı bilgisi gönderilemedi: $e';
+      notifyListeners();
+    }
+  }
+
+  // ── Rota Optimizasyonu ────────────────────────────────────────────
+  // Kullanıcının o anki GPS konumundan başlayıp, tüm tamamlanmamış
+  // durakları en kısa toplam mesafeyle gezecek sırayı backend'den alır
+  // ve _addresses listesini bu sıraya göre yeniden düzenler.
+  Future<bool> optimizeRoute() async {
+    if (_addresses.isEmpty) return false;
+
+    _isOptimizing = true;
+    _optimizeError = null;
+    notifyListeners();
+
+    try {
+      // 1. Kullanıcının o anki konumunu al
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _optimizeError = 'Konum servisleri kapalı. Lütfen GPS\'i açın.';
+        return false;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _optimizeError = 'Konum izni reddedildi.';
+          return false;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        _optimizeError =
+            'Konum izni kalıcı olarak reddedildi. Ayarlardan izin verin.';
+        return false;
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+
+      // 2. Sadece henüz tamamlanmamış durakları optimize et
+      final pendingAddresses =
+          _addresses.where((a) => !a.isCompleted).toList();
+      final completedAddresses =
+          _addresses.where((a) => a.isCompleted).toList();
+
+      if (pendingAddresses.isEmpty) {
+        _optimizeError = 'Optimize edilecek tamamlanmamış durak yok.';
+        return false;
+      }
+
+      // 3. Backend'e istek at
+      final response = await http.post(
+        Uri.parse('$_baseUrl/routes/optimize'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'origin': {
+            'latitude': position.latitude,
+            'longitude': position.longitude,
+          },
+          'stops': pendingAddresses
+              .map((a) => {
+                    'id': a.id,
+                    'latitude': a.latitude,
+                    'longitude': a.longitude,
+                  })
+              .toList(),
+        }),
+      );
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        _optimizeError = 'Rota optimize edilemedi: ${response.statusCode}';
+        return false;
+      }
+
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final optimizedOrder = List<int>.from(decoded['optimizedOrder']);
+
+      // 4. _addresses listesini yeni sıraya göre düzenle
+      //    (tamamlanmış duraklar en başta sabit kalır, tamamlanmamışlar
+      //     optimize edilmiş sırayla arkasından eklenir)
+      final reordered = optimizedOrder.map((i) => pendingAddresses[i]).toList();
+      _addresses = [...completedAddresses, ...reordered];
+
+      // orderNumber alanlarını da güncelle (görsel sıralama için)
+      for (int i = 0; i < _addresses.length; i++) {
+        _addresses[i] = _addresses[i].copyWith(orderNumber: i + 1);
+      }
+
+      _optimizeError = null;
+      return true;
+    } catch (e) {
+      _optimizeError = 'Rota optimizasyonu sırasında hata oluştu: $e';
+      return false;
+    } finally {
+      _isOptimizing = false;
       notifyListeners();
     }
   }

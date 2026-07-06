@@ -12,6 +12,7 @@ import 'screens/profile_screen.dart';
 import 'screens/guest/guest_app.dart';
 import 'services/auth_service.dart';
 import 'services/route_provider.dart';
+import 'services/location_service.dart';
 import 'theme/app_colors.dart';
 
 void main() async {
@@ -89,6 +90,18 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    LocationService.startTracking();
+  }
+
+  @override
+  void dispose() {
+    LocationService.stopTracking();
+    super.dispose();
+  }
 
   final List<Widget> _screens = [
     const DashboardScreen(),
