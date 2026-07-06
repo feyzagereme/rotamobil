@@ -12,6 +12,8 @@ import 'screens/profile_screen.dart';
 import 'screens/guest/guest_app.dart';
 import 'services/auth_service.dart';
 import 'services/route_provider.dart';
+import 'services/vehicle_provider.dart';
+import 'services/fleet_provider.dart';
 import 'theme/app_colors.dart';
 
 void main() async {
@@ -19,8 +21,12 @@ void main() async {
   await initializeDateFormatting('tr_TR');
   final loggedIn = await AuthService.isLoggedIn();
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => RouteProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => RouteProvider()),
+        ChangeNotifierProvider(create: (_) => VehicleProvider()),
+        ChangeNotifierProvider(create: (_) => FleetProvider()),
+      ],
       child: RotaMobilApp(startLoggedIn: loggedIn),
     ),
   );
@@ -97,6 +103,30 @@ class _MainAppState extends State<MainApp> {
     const CalendarScreen(),
     const ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<VehicleProvider>().addListener(_handleVehicleChange);
+      _handleVehicleChange();
+    });
+  }
+
+  // VehicleProvider (araç seçici) değiştiğinde RouteProvider ve FleetProvider'ı
+  // seçilen araca göre senkron tutar.
+  void _handleVehicleChange() {
+    final vehicleId = context.read<VehicleProvider>().selectedVehicleId;
+    context.read<RouteProvider>().switchVehicle(vehicleId);
+    context.read<FleetProvider>().switchVehicle(vehicleId);
+  }
+
+  @override
+  void dispose() {
+    context.read<VehicleProvider>().removeListener(_handleVehicleChange);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

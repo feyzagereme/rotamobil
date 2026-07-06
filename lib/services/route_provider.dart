@@ -16,6 +16,7 @@ class RouteProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   Timer? _syncTimer;
+  int? _vehicleId;
 
   RouteProvider() {
     loadActiveRoute();
@@ -27,6 +28,20 @@ class RouteProvider extends ChangeNotifier {
   String? get activeRouteName => _activeRouteName;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  int? get vehicleId => _vehicleId;
+
+  /// Araç seçici değiştiğinde çağrılır: state'i sıfırlayıp seçilen aracın
+  /// rotasını hemen çeker, sonraki 10sn'lik otomatik senkronizasyon da
+  /// bu araca göre devam eder.
+  Future<void> switchVehicle(int vehicleId) async {
+    if (_vehicleId == vehicleId) return;
+    _vehicleId = vehicleId;
+    _addresses = [];
+    _activeRouteId = null;
+    _activeRouteName = null;
+    notifyListeners();
+    await loadActiveRoute();
+  }
 
   int get totalStops => _addresses.length;
   int get completedStops => _addresses.where((a) => a.isCompleted).length;
@@ -51,9 +66,12 @@ class RouteProvider extends ChangeNotifier {
         return;
       }
 
-      final response = await http.get(
-        Uri.parse('$_baseUrl/routes/$userId/active'),
+      final uri = Uri.parse('$_baseUrl/routes/$userId/active').replace(
+        queryParameters: _vehicleId == null
+            ? null
+            : {'vehicle_id': _vehicleId.toString()},
       );
+      final response = await http.get(uri);
 
       if (response.statusCode == 404) {
         _addresses = [];
@@ -112,7 +130,7 @@ class RouteProvider extends ChangeNotifier {
 
   void startAutoSync() {
     _syncTimer?.cancel();
-    _syncTimer = Timer.periodic(const Duration(minutes: 2), (_) {
+    _syncTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       loadActiveRoute();
     });
   }
