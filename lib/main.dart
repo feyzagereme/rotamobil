@@ -13,6 +13,8 @@ import 'screens/guest/guest_app.dart';
 import 'services/auth_service.dart';
 import 'services/route_provider.dart';
 import 'services/location_service.dart';
+import 'services/vehicle_provider.dart';
+import 'services/fleet_provider.dart';
 import 'theme/app_colors.dart';
 
 void main() async {
@@ -20,8 +22,12 @@ void main() async {
   await initializeDateFormatting('tr_TR');
   final loggedIn = await AuthService.isLoggedIn();
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => RouteProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => RouteProvider()),
+        ChangeNotifierProvider(create: (_) => VehicleProvider()),
+        ChangeNotifierProvider(create: (_) => FleetProvider()),
+      ],
       child: RotaMobilApp(startLoggedIn: loggedIn),
     ),
   );
@@ -64,7 +70,9 @@ class RotaMobilApp extends StatelessWidget {
           color: AppColors.surface,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(AppTheme.borderRadius)),
+            borderRadius: BorderRadius.all(
+              Radius.circular(AppTheme.borderRadius),
+            ),
             side: BorderSide(color: AppColors.stroke),
           ),
         ),
@@ -91,18 +99,6 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   int _selectedIndex = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    LocationService.startTracking();
-  }
-
-  @override
-  void dispose() {
-    LocationService.stopTracking();
-    super.dispose();
-  }
-
   final List<Widget> _screens = [
     const DashboardScreen(),
     const MapScreen(),
@@ -110,6 +106,32 @@ class _MainAppState extends State<MainApp> {
     const CalendarScreen(),
     const ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    LocationService.startTracking();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<VehicleProvider>().addListener(_handleVehicleChange);
+      _handleVehicleChange();
+    });
+  }
+
+  // VehicleProvider (araç seçici) değiştiğinde RouteProvider ve FleetProvider'ı
+  // seçilen araca göre senkron tutar.
+  void _handleVehicleChange() {
+    final vehicleId = context.read<VehicleProvider>().selectedVehicleId;
+    context.read<RouteProvider>().switchVehicle(vehicleId);
+    context.read<FleetProvider>().switchVehicle(vehicleId);
+  }
+
+  @override
+  void dispose() {
+    LocationService.stopTracking();
+    context.read<VehicleProvider>().removeListener(_handleVehicleChange);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,15 +144,30 @@ class _MainAppState extends State<MainApp> {
         backgroundColor: AppColors.navBg,
         selectedItemColor: AppColors.accent,
         unselectedItemColor: Colors.white.withValues(alpha: 0.45),
-        selectedLabelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        selectedLabelStyle: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
         unselectedLabelStyle: const TextStyle(fontSize: 11),
         elevation: 0,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Ana'),
-          BottomNavigationBarItem(icon: Icon(Icons.map_rounded), label: 'Harita'),
-          BottomNavigationBarItem(icon: Icon(Icons.list_rounded), label: 'Liste'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_month_rounded), label: 'Takvim'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Profil'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map_rounded),
+            label: 'Harita',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.list_rounded),
+            label: 'Liste',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_month_rounded),
+            label: 'Takvim',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_rounded),
+            label: 'Profil',
+          ),
         ],
       ),
     );

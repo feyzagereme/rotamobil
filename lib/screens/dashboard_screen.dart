@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/route_provider.dart';
+import '../services/vehicle_provider.dart';
 import '../theme/app_colors.dart';
 import 'address_detail_screen.dart';
 
@@ -112,6 +113,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     fontWeight: FontWeight.w500)),
                             Row(
                               children: [
+                                const _VehicleSelector(),
+                                const SizedBox(width: 10),
                                 if (provider.isLoading)
                                   const SizedBox(width: 16, height: 16,
                                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white38))
@@ -302,6 +305,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ],
+    );
+  }
+}
+
+// ── Araç seçici: seçili araca göre rota/filo verisini değiştirir
+class _VehicleSelector extends StatelessWidget {
+  const _VehicleSelector();
+
+  @override
+  Widget build(BuildContext context) {
+    final vehicleProvider = context.watch<VehicleProvider>();
+    return PopupMenuButton<int>(
+      initialValue: vehicleProvider.selectedVehicleId,
+      onSelected: (id) => context.read<VehicleProvider>().select(id),
+      itemBuilder: (context) => List.generate(
+        VehicleProvider.vehicleCount,
+        (i) => PopupMenuItem<int>(
+          value: i,
+          child: Text(vehicleProvider.labelFor(i)),
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.local_shipping_rounded, size: 14, color: Colors.white),
+            const SizedBox(width: 4),
+            Text(
+              vehicleProvider.labelFor(vehicleProvider.selectedVehicleId),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+            ),
+            const Icon(Icons.arrow_drop_down_rounded, size: 16, color: Colors.white),
+          ],
+        ),
+      ),
     );
   }
 }
