@@ -9,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// 10 saniyede bir çeker: sabit başlangıç adresi, kuyruktan düşürülen
 /// adresler, tekrar tipleri.
 class FleetProvider extends ChangeNotifier {
-  static const String _baseUrl = 'https://route-backend-wkiy.onrender.com';
+  static const String _baseUrl = 'https://route-backend-jeu7.onrender.com';
 
   int? _vehicleId;
   Map<String, dynamic>? _workspace;
@@ -46,9 +46,7 @@ class FleetProvider extends ChangeNotifier {
       final userId = prefs.getInt('user_id');
       if (userId == null) return;
 
-      final response = await http.get(
-        Uri.parse('$_baseUrl/fleet/$userId'),
-      );
+      final response = await http.get(Uri.parse('$_baseUrl/fleet/$userId'));
 
       if (response.statusCode < 200 || response.statusCode >= 300) return;
 
@@ -58,7 +56,9 @@ class FleetProvider extends ChangeNotifier {
 
       _workspace = entry?['workspace'] as Map<String, dynamic>?;
       final updatedAtRaw = entry?['updatedAt'] as String?;
-      _updatedAt = updatedAtRaw != null ? DateTime.tryParse(updatedAtRaw) : null;
+      _updatedAt = updatedAtRaw != null
+          ? DateTime.tryParse(updatedAtRaw)
+          : null;
       notifyListeners();
     } catch (_) {
       // Filo durumu çekilemezse sessizce yoksay, rota akışını bozmasın.
