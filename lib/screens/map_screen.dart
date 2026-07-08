@@ -1,89 +1,84 @@
 import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../services/route_provider.dart';
 import '../models/address_model.dart';
 import '../theme/app_colors.dart';
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key});
+  const MapScreen({Key? key}) : super(key: key);
+
   @override
   State<MapScreen> createState() => _MapScreenState();
 }
 
 class _MapScreenState extends State<MapScreen> {
-  GoogleMapController? _mapController;
+  late final MapController _mapController;
   int? _selectedIndex;
   LatLng? _pendingPin;
   String? _pendingAddressText;
   bool _isGeocoding = false;
 
-  Set<Marker> _buildMarkers(List<Address> addresses) {
-    final markers = <Marker>{};
-    for (int i = 0; i < addresses.length; i++) {
-      final address = addresses[i];
-      final isSelected = _selectedIndex == i;
-      markers.add(Marker(
-        markerId: MarkerId('address_$i'),
-        position: LatLng(address.latitude, address.longitude),
-        icon: isSelected
-            ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure)
-            : address.isCompleted
-                ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
-                : BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        infoWindow: InfoWindow(
-          title: address.customerName,
-          snippet: address.street,
-        ),
-        onTap: () => setState(() {
-          _selectedIndex = isSelected ? null : i;
-          _pendingPin = null;
-        }),
-      ));
-    }
-    if (_pendingPin != null) {
-      markers.add(Marker(
-        markerId: const MarkerId('pending'),
-        position: _pendingPin!,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-        infoWindow: InfoWindow(title: _pendingAddressText ?? 'Yeni Durak'),
-      ));
-    }
-    return markers;
-  }
-
-  Set<Polyline> _buildPolylines(List<Address> addresses) {
-    if (addresses.length < 2) return {};
-    return {
-      Polyline(
-        polylineId: const PolylineId('route'),
-        points: addresses.map((a) => LatLng(a.latitude, a.longitude)).toList(),
-        color: const Color(0xFF53D6FF),
-        width: 3,
-      ),
-    };
+  @override
+  void initState() {
+    super.initState();
+    _mapController = MapController();
   }
 
   LatLng _center(List<Address> addresses) {
-    if (addresses.isEmpty) return const LatLng(40.98, 27.52);
-    final lats = addresses.map((a) => a.latitude);
-    final lngs = addresses.map((a) => a.longitude);
+    if (addresses.isEmpty) return const LatLng(38.33, 27.18);
+    final lats = addresses.map((a) => a.latitude).toList();
+    final lngs = addresses.map((a) => a.longitude).toList();
     return LatLng(
       lats.reduce((a, b) => a + b) / lats.length,
       lngs.reduce((a, b) => a + b) / lngs.length,
     );
   }
 
-  Future<void> _onMapTap(LatLng latlng) async {
+  void _selectAddress(int index, List<Address> addresses) {
+    setState(() {
+      _selectedIndex = index;
+      _pendingPin = null;
+      _pendingAddressText = null;
+    });
+    _mapController.move(LatLng(addresses[index].latitude, addresses[index].longitude), 14);
+  }
+
+  Future<void> _launchNavigation(Address address) async {
+    final url = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1'
+      '&destination=${address.latitude},${address.longitude}'
+      '&travelmode=driving',
+    );
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Google Maps açılamadı'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(12),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _onMapTap(TapPosition _, LatLng latlng) async {
     setState(() {
       _selectedIndex = null;
       _pendingPin = latlng;
-      _pendingText = null;
+      _pendingAddressText = null;
       _isGeocoding = true;
     });
+
     try {
       final uri = Uri.https('nominatim.openstreetmap.org', '/reverse', {
         'lat': latlng.latitude.toString(),
@@ -104,21 +99,22 @@ class _MapScreenState extends State<MapScreen> {
       }
     } catch (_) {
       if (mounted) setState(() {
-        _pendingAddressText = '${latlng.latitude.toStringAsFixed(4)}, ${latlng.longitude.toStringAsFixed(4)}';
+        _pendingAddressText = '${latlng.latitude.toStringAsFixed(5)}, ${latlng.longitude.toStringAsFixed(5)}';
         _isGeocoding = false;
       });
     }
   }
 
-  String? _pendingText;
-
-  Future<void> _addAddress(RouteProvider provider) async {
+  void _addPendingToRoute(RouteProvider provider) {
     if (_pendingPin == null) return;
     final newAddress = Address(
-      id: DateTime.now().millisecondsSinceEpoch,
+      id: provider.addresses.length + 100,
       orderNumber: provider.addresses.length + 1,
       street: _pendingAddressText ?? 'Yeni Adres',
-      district: '', city: 'Tekirdağ', postalCode: '', country: 'Türkiye',
+      district: '',
+      city: 'İzmir',
+      postalCode: '',
+      country: 'Türkiye',
       latitude: _pendingPin!.latitude,
       longitude: _pendingPin!.longitude,
       customerName: 'Yeni Durak ${provider.addresses.length + 1}',
@@ -126,23 +122,16 @@ class _MapScreenState extends State<MapScreen> {
     );
     provider.addAddress(newAddress);
     setState(() { _pendingPin = null; _pendingAddressText = null; });
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
         content: const Text('Adres rotaya eklendi'),
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         margin: const EdgeInsets.all(12),
-      ));
-    }
-  }
-
-  Future<void> _launchNavigation(Address address) async {
-    final url = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1'
-      '&destination=${address.latitude},${address.longitude}&travelmode=driving',
+        duration: const Duration(seconds: 2),
+      ),
     );
-    if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
   @override
@@ -154,130 +143,232 @@ class _MapScreenState extends State<MapScreen> {
         final selectedAddress = _selectedIndex != null && _selectedIndex! < addresses.length
             ? addresses[_selectedIndex!]
             : null;
-        final showPanel = selectedAddress != null || _pendingPin != null;
+        final showBottomSheet = selectedAddress != null || _pendingPin != null;
 
         return Scaffold(
           body: Stack(
             children: [
-              GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: center,
-                  zoom: 12,
+              FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: center,
+                  initialZoom: 12,
+                  onTap: _onMapTap,
                 ),
-                onMapCreated: (controller) => _mapController = controller,
-                onTap: _onMapTap,
-                markers: _buildMarkers(addresses),
-                polylines: _buildPolylines(addresses),
-                myLocationEnabled: true,
-                myLocationButtonEnabled: false,
-                mapToolbarEnabled: false,
-                zoomControlsEnabled: false,
-                trafficEnabled: true,
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.rota360.rotamobil',
+                  ),
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: addresses.map((a) => LatLng(a.latitude, a.longitude)).toList(),
+                        color: AppColors.accent.withValues(alpha: 0.8),
+                        strokeWidth: 3,
+                      ),
+                    ],
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      ...addresses.asMap().entries.map((entry) {
+                        final i = entry.key;
+                        final a = entry.value;
+                        final isSelected = _selectedIndex == i;
+                        return Marker(
+                          point: LatLng(a.latitude, a.longitude),
+                          width: isSelected ? 48 : 36,
+                          height: isSelected ? 48 : 36,
+                          child: GestureDetector(
+                            onTap: () => _selectAddress(i, addresses),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              decoration: BoxDecoration(
+                                color: a.isCompleted
+                                    ? AppColors.success
+                                    : isSelected
+                                        ? AppColors.primaryDark
+                                        : AppColors.accent,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2.5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  )
+                                ],
+                              ),
+                              child: Center(
+                                child: a.isCompleted
+                                    ? const Icon(Icons.check, color: Colors.white, size: 16)
+                                    : Text('${i + 1}',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: isSelected ? 16 : 13,
+                                          fontWeight: FontWeight.bold,
+                                        )),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                      if (_pendingPin != null)
+                        Marker(
+                          point: _pendingPin!,
+                          width: 44, height: 44,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.warning,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2.5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 3),
+                                )
+                              ],
+                            ),
+                            child: const Icon(Icons.add, color: Colors.white, size: 22),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ),
 
               // Üst bar
               Positioned(
                 top: 0, left: 0, right: 0,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [const Color(0xFF0A1628).withValues(alpha: 0.85), Colors.transparent],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                  ),
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0A1628).withValues(alpha: 0.8),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                            ),
-                            child: const Text('Harita',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 8,
+                              )
+                            ],
                           ),
-                          const Spacer(),
-                          _mapBtn(Icons.my_location_rounded, () {
-                            _mapController?.animateCamera(
-                              CameraUpdate.newLatLngZoom(center, 12),
-                            );
-                          }),
-                        ],
-                      ),
+                          child: const Text('Harita',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                        ),
+                        const Spacer(),
+                        _mapButton(Icons.fit_screen_rounded, () => _mapController.move(center, 12)),
+                        const SizedBox(width: 8),
+                        _mapButton(Icons.refresh_rounded, provider.refresh),
+                      ],
                     ),
                   ),
                 ),
               ),
 
               // İpucu
-              if (!showPanel)
+              if (!showBottomSheet)
                 Positioned(
-                  top: 90, left: 0, right: 0,
+                  top: 80, left: 0, right: 0,
                   child: Center(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0A1628).withValues(alpha: 0.75),
+                        color: AppColors.textDark.withValues(alpha: 0.75),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                       ),
-                      child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.touch_app_rounded, color: Colors.white54, size: 14),
-                        SizedBox(width: 6),
-                        Text('Yeni adres eklemek için haritaya dokun',
-                            style: TextStyle(color: Colors.white70, fontSize: 12)),
-                      ]),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.touch_app_rounded, color: Colors.white, size: 14),
+                          SizedBox(width: 6),
+                          Text('Yeni adres eklemek için haritaya dokun',
+                              style: TextStyle(color: Colors.white, fontSize: 12)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
 
-              // Alt panel
+              // Zoom kontrolleri
               Positioned(
-                bottom: 0, left: 0, right: 0,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0A1628),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(24), topRight: Radius.circular(24),
-                    ),
-                  ),
-                  child: showPanel
-                      ? Column(mainAxisSize: MainAxisSize.min, children: [
-                          Container(
-                            margin: const EdgeInsets.only(top: 12),
-                            width: 40, height: 4,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-                            child: selectedAddress != null
-                                ? _selectedPanel(selectedAddress)
-                                : _pendingPanel(provider),
-                          ),
-                        ])
-                      : Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _bottomStat('${addresses.length}', 'Adres'),
-                              Container(width: 1, height: 32, color: Colors.white.withValues(alpha: 0.15)),
-                              _bottomStat('${provider.completedStops}', 'Tamamlandı'),
-                              Container(width: 1, height: 32, color: Colors.white.withValues(alpha: 0.15)),
-                              _bottomStat('—', 'Mesafe'),
-                            ],
-                          ),
-                        ),
+                right: 12,
+                bottom: showBottomSheet ? 230 : 120,
+                child: Column(
+                  children: [
+                    _mapButton(Icons.add, () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom + 1)),
+                    const SizedBox(height: 8),
+                    _mapButton(Icons.remove, () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom - 1)),
+                    const SizedBox(height: 8),
+                    _mapButton(Icons.my_location_rounded, () => _mapController.move(center, 12)),
+                  ],
                 ),
               ),
+
+              // Alt panel
+              if (showBottomSheet)
+                Positioned(
+                  bottom: 0, left: 0, right: 0,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                      boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 16, offset: Offset(0, -4))],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(top: 12),
+                          width: 40, height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.stroke,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                          child: selectedAddress != null
+                              ? _selectedPanel(selectedAddress)
+                              : _pendingPanel(provider),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Positioned(
+                  bottom: 0, left: 0, right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                      boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 16, offset: Offset(0, -4))],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _bottomStat('${addresses.length}', 'Adres'),
+                        Container(width: 1, height: 32, color: AppColors.stroke),
+                        _bottomStat('${provider.completedStops}', 'Tamamlandı'),
+                        Container(width: 1, height: 32, color: AppColors.stroke),
+                        _bottomStat(provider.activeRouteName ?? 'Aktif', 'Rota'),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
         );
@@ -286,135 +377,171 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _selectedPanel(Address address) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        Container(
-          width: 40, height: 40,
-          decoration: BoxDecoration(
-            color: const Color(0xFF53D6FF).withValues(alpha: 0.15),
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFF53D6FF).withValues(alpha: 0.4)),
-          ),
-          child: Center(
-            child: Text('${_selectedIndex! + 1}',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF53D6FF))),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(address.customerName,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
-          const SizedBox(height: 2),
-          Text('${address.street}, ${address.district}',
-              style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.6)),
-              maxLines: 1, overflow: TextOverflow.ellipsis),
-        ])),
-        _mapBtn(Icons.close_rounded, () => setState(() => _selectedIndex = null)),
-      ]),
-      const SizedBox(height: 16),
-      SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: () => _launchNavigation(address),
-          icon: const Icon(Icons.navigation_rounded, size: 18),
-          label: const Text('Navigasyonu Başlat'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF53D6FF),
-            foregroundColor: const Color(0xFF0A1628),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            elevation: 0,
-          ),
-        ),
-      ),
-    ]);
-  }
-
-  Widget _pendingPanel(RouteProvider provider) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        Container(
-          width: 40, height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.warning.withValues(alpha: 0.15),
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
-          ),
-          child: const Icon(Icons.add_location_alt_rounded, color: AppColors.warning, size: 20),
-        ),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Yeni Durak',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
-          const SizedBox(height: 2),
-          _isGeocoding
-              ? Row(children: [
-                  SizedBox(width: 12, height: 12,
-                      child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.white.withValues(alpha: 0.5))),
-                  const SizedBox(width: 6),
-                  Text('Adres aranıyor...', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.5))),
-                ])
-              : Text(_pendingAddressText ?? 'Konum seçildi',
-                  style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.65)),
-                  maxLines: 2, overflow: TextOverflow.ellipsis),
-        ])),
-        _mapBtn(Icons.close_rounded, () => setState(() { _pendingPin = null; _pendingAddressText = null; })),
-      ]),
-      const SizedBox(height: 16),
-      Row(children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: () => setState(() { _pendingPin = null; _pendingAddressText = null; }),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white60,
-              side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                color: address.isCompleted
+                    ? AppColors.success.withValues(alpha: 0.12)
+                    : AppColors.accent.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: address.isCompleted
+                    ? const Icon(Icons.check, color: AppColors.success, size: 18)
+                    : Text('${_selectedIndex! + 1}',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.accent)),
+              ),
             ),
-            child: const Text('İptal'),
-          ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(address.customerName,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                  const SizedBox(height: 2),
+                  Text('${address.street}, ${address.district}',
+                      style: const TextStyle(fontSize: 13, color: AppColors.textMid)),
+                ],
+              ),
+            ),
+            _mapButton(Icons.close_rounded, () => setState(() => _selectedIndex = null)),
+          ],
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          flex: 2,
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: _isGeocoding ? null : () => _addAddress(provider),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Rotaya Ekle'),
+            onPressed: () => _launchNavigation(address),
+            icon: const Icon(Icons.navigation_rounded, size: 18),
+            label: const Text('Navigasyonu Başlat'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF53D6FF),
-              foregroundColor: const Color(0xFF0A1628),
+              backgroundColor: AppColors.primaryDark,
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 13),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               elevation: 0,
             ),
           ),
         ),
-      ]),
-    ]);
+      ],
+    );
   }
 
-  Widget _mapBtn(IconData icon, VoidCallback onTap) {
+  Widget _pendingPanel(RouteProvider provider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.add_location_alt_rounded, color: AppColors.warning, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Yeni Adres',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                  const SizedBox(height: 2),
+                  _isGeocoding
+                      ? const Row(children: [
+                          SizedBox(
+                            width: 12, height: 12,
+                            child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.textLight),
+                          ),
+                          SizedBox(width: 6),
+                          Text('Adres aranıyor...', style: TextStyle(fontSize: 12, color: AppColors.textLight)),
+                        ])
+                      : Text(_pendingAddressText ?? 'Konum seçildi',
+                          style: const TextStyle(fontSize: 13, color: AppColors.textMid),
+                          maxLines: 2, overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+            _mapButton(Icons.close_rounded, () => setState(() {
+              _pendingPin = null;
+              _pendingAddressText = null;
+            })),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => setState(() { _pendingPin = null; _pendingAddressText = null; }),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textMid,
+                  side: const BorderSide(color: AppColors.stroke),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('İptal'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: ElevatedButton.icon(
+                onPressed: _isGeocoding ? null : () => _addPendingToRoute(provider),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Rotaya Ekle'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryDark,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: AppColors.stroke,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _mapButton(IconData icon, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 38, height: 38,
+        width: 40, height: 40,
         decoration: BoxDecoration(
-          color: const Color(0xFF0A1628).withValues(alpha: 0.85),
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8)],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 8,
+            )
+          ],
         ),
-        child: Icon(icon, size: 18, color: Colors.white),
+        child: Icon(icon, size: 20, color: AppColors.textDark),
       ),
     );
   }
 
   Widget _bottomStat(String value, String label) {
-    return Column(mainAxisSize: MainAxisSize.min, children: [
-      Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white)),
-      const SizedBox(height: 2),
-      Text(label, style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.5))),
-    ]);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
+      ],
+    );
   }
 }

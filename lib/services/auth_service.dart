@@ -45,6 +45,7 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyLoggedIn);
     await prefs.remove(_keyUsername);
+    await prefs.remove("user_id");
   }
 
   /// Uygulama açılışında oturum açık mı kontrol eder.
