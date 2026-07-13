@@ -73,11 +73,9 @@ class RouteProvider extends ChangeNotifier {
         return;
       }
 
-      final uri = Uri.parse('$_baseUrl/routes/$userId/active').replace(
-        queryParameters: _vehicleId == null
-            ? null
-            : {'vehicle_id': _vehicleId.toString()},
-      );
+      final Uri uri = _vehicleId != null
+          ? Uri.parse('$_baseUrl/vehicles/$_vehicleId/active-route')
+          : Uri.parse('$_baseUrl/routes/$userId/active');
       final response = await http.get(uri);
 
       if (response.statusCode == 404) {

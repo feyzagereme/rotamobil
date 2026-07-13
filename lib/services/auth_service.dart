@@ -29,6 +29,16 @@ class AuthService {
           );
         }
 
+        final vehicleId = body["vehicle_id"];
+        if (vehicleId != null) {
+          await prefs.setInt(
+            "assigned_vehicle_id",
+            vehicleId is int ? vehicleId : int.parse(vehicleId.toString()),
+          );
+        } else {
+          await prefs.remove("assigned_vehicle_id");
+        }
+
         await prefs.setBool(_keyLoggedIn, true);
         await prefs.setString(_keyUsername, username);
         return null;
