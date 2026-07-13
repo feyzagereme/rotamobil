@@ -15,13 +15,15 @@ class FleetProvider extends ChangeNotifier {
   Map<String, dynamic>? _workspace;
   DateTime? _updatedAt;
   Timer? _syncTimer;
+  bool _syncFailed = false;
 
   FleetProvider() {
     startAutoSync();
   }
 
-  Map<String, dynamic>? get workspace => _workspace;
+ Map<String, dynamic>? get workspace => _workspace;
   DateTime? get updatedAt => _updatedAt;
+  bool get syncFailed => _syncFailed;
 
   Map<String, dynamic>? get fixedHome =>
       _workspace?['fixedHome'] as Map<String, dynamic>?;
@@ -59,9 +61,13 @@ class FleetProvider extends ChangeNotifier {
       _updatedAt = updatedAtRaw != null
           ? DateTime.tryParse(updatedAtRaw)
           : null;
+      _syncFailed = false;
       notifyListeners();
     } catch (_) {
-      // Filo durumu çekilemezse sessizce yoksay, rota akışını bozmasın.
+      // Rota akışını bozmamak için sayfayı kilitlemiyoruz, ama durumu
+      // dışarıya bildiriyoruz ki UI küçük bir uyarı gösterebilsin.
+      _syncFailed = true;
+      notifyListeners();
     }
   }
 
