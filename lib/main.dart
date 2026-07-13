@@ -16,6 +16,7 @@ import 'services/location_service.dart';
 import 'services/vehicle_provider.dart';
 import 'services/fleet_provider.dart';
 import 'theme/app_colors.dart';
+import 'screens/forgot_password_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -79,12 +80,13 @@ class RotaMobilApp extends StatelessWidget {
       ),
       initialRoute: '/splash',
       routes: {
-        '/splash': (_) => const SplashScreen(),
-        '/welcome': (_) => const WelcomeScreen(),
-        '/login': (_) => const LoginScreen(),
-        '/home': (_) => const MainApp(),
-        '/guest': (_) => const GuestApp(),
-      },
+  '/splash': (_) => const SplashScreen(),
+  '/welcome': (_) => const WelcomeScreen(),
+  '/login': (_) => const LoginScreen(),
+  '/forgot-password': (_) => const ForgotPasswordScreen(),
+  '/home': (_) => const MainApp(),
+  '/guest': (_) => const GuestApp(),
+},
     );
   }
 }

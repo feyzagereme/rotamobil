@@ -188,9 +188,28 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
 
+                      const SizedBox(height: 4),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pushNamed('/forgot-password');
+                          },
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 0),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            'Şifremi unuttum?',
+                            style: TextStyle(color: AppColors.primary, fontSize: 12.5),
+                          ),
+                        ),
+                      ),
+
                       // Hata mesajı
                       if (_errorMessage != null) ...[
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(
