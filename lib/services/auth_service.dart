@@ -19,6 +19,11 @@ class AuthService {
       final body = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
+        final role = body["role"] as String?;
+        if (role != null && role != "driver") {
+          return 'Bu hesap sürücü hesabı değil, mobil uygulamaya giriş yapamaz.';
+        }
+
         final prefs = await SharedPreferences.getInstance();
 
         final userId = body["user_id"];
