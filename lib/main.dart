@@ -15,11 +15,15 @@ import 'services/route_provider.dart';
 import 'services/location_service.dart';
 import 'services/vehicle_provider.dart';
 import 'services/fleet_provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'services/notification_service.dart';
 import 'theme/app_colors.dart';
 import 'screens/forgot_password_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  await NotificationService.initialize();
   await initializeDateFormatting('tr_TR');
   final loggedIn = await AuthService.isLoggedIn();
   runApp(

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
@@ -46,6 +47,12 @@ class AuthService {
 
         await prefs.setBool(_keyLoggedIn, true);
         await prefs.setString(_keyUsername, username);
+
+        if (userId != null) {
+          final resolvedUserId = userId is int ? userId : int.parse(userId.toString());
+          await NotificationService.syncTokenAfterLogin(resolvedUserId);
+        }
+
         return null;
       } else {
         return body['error'] ?? 'Kullanıcı adı veya şifre hatalı';
