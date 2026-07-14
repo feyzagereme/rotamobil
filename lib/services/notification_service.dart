@@ -19,7 +19,9 @@ class NotificationService {
       sound: true,
     );
 
-    final token = await messaging.getToken();
+    final token = await messaging.getToken(
+      vapidKey: 'BGrZiA9A4_BV1kktLmlF8OPb5HHZ5MFq0eJRghQmwvFQzYkBoKMxIOmAPe3j7x89tS-YPZ75rq7vjJE47NYuhMw',
+    );
     if (token != null) {
       await _saveAndSendToken(token);
     }
