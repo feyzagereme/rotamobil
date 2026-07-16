@@ -19,7 +19,6 @@ import 'services/fleet_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'services/notification_service.dart';
 import 'theme/app_colors.dart';
-import 'screens/forgot_password_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -99,7 +98,6 @@ class RotaMobilApp extends StatelessWidget {
   '/splash': (_) => const SplashScreen(),
   '/welcome': (_) => const WelcomeScreen(),
   '/login': (_) => const LoginScreen(),
-  '/forgot-password': (_) => const ForgotPasswordScreen(),
   '/home': (_) => const MainApp(),
   '/guest': (_) => const GuestApp(),
 },
