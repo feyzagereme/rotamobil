@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'auth_service.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/address_model.dart';
@@ -112,7 +114,9 @@ class RouteProvider extends ChangeNotifier {
       final Uri uri = _vehicleId != null
           ? Uri.parse('$_baseUrl/vehicles/$_vehicleId/active-route')
           : Uri.parse('$_baseUrl/routes/$userId/active');
-      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+     final response = await http
+          .get(uri, headers: await AuthService.authHeaders())
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 404) {
         _addresses = [];
@@ -229,7 +233,7 @@ class RouteProvider extends ChangeNotifier {
         Uri.parse(
           '$_baseUrl/routes/$_activeRouteId/stops/${updated.id}/complete',
         ),
-        headers: {'Content-Type': 'application/json'},
+        headers: await AuthService.authHeaders(),
         body: jsonEncode({'completed': updated.isCompleted}),
       );
 
@@ -288,7 +292,7 @@ class RouteProvider extends ChangeNotifier {
 
       final response = await http.post(
         Uri.parse('$_baseUrl/routes/optimize'),
-        headers: {'Content-Type': 'application/json'},
+        headers: await AuthService.authHeaders(),
         body: jsonEncode({
           'origin': {
             'latitude': position.latitude,

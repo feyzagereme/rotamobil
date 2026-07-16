@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'auth_service.dart';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -47,8 +48,11 @@ class FleetProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getInt('user_id');
       if (userId == null) return;
-
-      final response = await http.get(Uri.parse('$_baseUrl/fleet/$userId'));
+final response = await http.get(
+        Uri.parse('$_baseUrl/fleet/$userId'),
+        headers: await AuthService.authHeaders(),
+      );
+      
 
       if (response.statusCode < 200 || response.statusCode >= 300) return;
 

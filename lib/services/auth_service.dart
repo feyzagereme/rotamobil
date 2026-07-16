@@ -45,6 +45,11 @@ class AuthService {
           await prefs.remove("assigned_vehicle_id");
         }
 
+        final authToken = body["token"];
+        if (authToken != null) {
+          await prefs.setString("auth_token", authToken.toString());
+        }
+
         await prefs.setBool(_keyLoggedIn, true);
         await prefs.setString(_keyUsername, username);
 
@@ -80,5 +85,14 @@ class AuthService {
   static Future<String> getUsername() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyUsername) ?? '';
+  }
+
+  static Future<Map<String, String>> authHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
   }
 }

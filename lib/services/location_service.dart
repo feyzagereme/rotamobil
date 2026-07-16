@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LocationService {
@@ -49,7 +50,7 @@ class LocationService {
 
       await http.post(
         Uri.parse('$_baseUrl/drivers/$userId/location'),
-        headers: {'Content-Type': 'application/json'},
+        headers: await AuthService.authHeaders(),
         body: jsonEncode({
           'latitude': lat,
           'longitude': lon,

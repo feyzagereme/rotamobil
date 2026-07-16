@@ -45,7 +45,7 @@ class NotificationService {
     try {
       await http.post(
         Uri.parse('${AuthService.baseUrl}/users/$userId/fcm-token'),
-        headers: {'Content-Type': 'application/json'},
+        headers: await AuthService.authHeaders(),
         body: jsonEncode({'fcm_token': token}),
       );
     } catch (_) {
