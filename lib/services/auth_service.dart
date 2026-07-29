@@ -4,7 +4,7 @@ import 'notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  static const String baseUrl = 'https://route-backend-jeu7.onrender.com';
+  static const String baseUrl = 'http://100.118.211.75:3000';
   static const String _keyLoggedIn = 'is_logged_in';
   static const String _keyUsername = 'username';
 

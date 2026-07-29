@@ -10,7 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// 10 saniyede bir çeker: sabit başlangıç adresi, kuyruktan düşürülen
 /// adresler, tekrar tipleri.
 class FleetProvider extends ChangeNotifier {
-  static const String _baseUrl = 'https://route-backend-jeu7.onrender.com';
+  static const String _baseUrl = 'http://100.118.211.75:3000';
 
   int? _vehicleId;
   Map<String, dynamic>? _workspace;

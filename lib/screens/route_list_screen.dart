@@ -43,7 +43,7 @@ class _RouteListScreenState extends State<RouteListScreen> {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getInt("user_id") ?? 1;
       final response = await http.get(
-        Uri.parse("https://route-backend-jeu7.onrender.com/routes/$userId"),
+        Uri.parse("http://100.118.211.75:3000/routes/$userId"),
       );
       if (response.statusCode == 200) {
         setState(() { _backendRoutes = jsonDecode(response.body); _isLoadingRoutes = false; });
