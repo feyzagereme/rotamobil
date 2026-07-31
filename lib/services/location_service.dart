@@ -2,12 +2,14 @@ import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LocationService {
   static const _baseUrl = 'http://100.118.211.75:3000';
   static Timer? _timer;
   static bool _isRunning = false;
+  static bool _lastSendFailed = false;
 
   // Konum izni kontrolü
   static Future<bool> requestPermission() async {
@@ -48,14 +50,17 @@ class LocationService {
 
       await http.post(
         Uri.parse('$_baseUrl/drivers/$userId/location'),
-        headers: {'Content-Type': 'application/json'},
+        headers: await AuthService.authHeaders(),
         body: jsonEncode({
           'latitude': lat,
           'longitude': lon,
           'timestamp': DateTime.now().toIso8601String(),
         }),
       );
-    } catch (_) {}
+      _lastSendFailed = false;
+    } catch (_) {
+      _lastSendFailed = true;
+    }
   }
 
   // 3 dakikada bir konum güncelle
@@ -86,4 +91,5 @@ class LocationService {
   }
 
   static bool get isRunning => _isRunning;
+  static bool get lastSendFailed => _lastSendFailed;
 }

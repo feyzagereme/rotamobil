@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "434121736536",
+    "project_id": "rota360-35ce3",
+    "storage_bucket": "rota360-35ce3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:434121736536:android:925aa0ee77c60b03c7e52d",
+        "android_client_info": {
+          "package_name": "com.rota360.rotamobil"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWikUp60faDc-Wvo2JkjdlfrxQ4E7yzSE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

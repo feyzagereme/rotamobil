@@ -7,6 +7,7 @@ import 'screens/welcome_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/route_list_screen.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'screens/calendar_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/guest/guest_app.dart';
@@ -15,10 +16,25 @@ import 'services/route_provider.dart';
 import 'services/location_service.dart';
 import 'services/vehicle_provider.dart';
 import 'services/fleet_provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'services/notification_service.dart';
 import 'theme/app_colors.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: kIsWeb
+        ? const FirebaseOptions(
+            apiKey: "AIzaSyDNntalqnmuOiJrgrpahfI3RRg8r9cM91w",
+            authDomain: "rota360-35ce3.firebaseapp.com",
+            projectId: "rota360-35ce3",
+            storageBucket: "rota360-35ce3.firebasestorage.app",
+            messagingSenderId: "434121736536",
+            appId: "1:434121736536:web:e8a409cb916d03dec7e52d",
+          )
+        : null,
+  );
+  await NotificationService.initialize();
   await initializeDateFormatting('tr_TR');
   final loggedIn = await AuthService.isLoggedIn();
   runApp(
@@ -79,12 +95,12 @@ class RotaMobilApp extends StatelessWidget {
       ),
       initialRoute: '/splash',
       routes: {
-        '/splash': (_) => const SplashScreen(),
-        '/welcome': (_) => const WelcomeScreen(),
-        '/login': (_) => const LoginScreen(),
-        '/home': (_) => const MainApp(),
-        '/guest': (_) => const GuestApp(),
-      },
+  '/splash': (_) => const SplashScreen(),
+  '/welcome': (_) => const WelcomeScreen(),
+  '/login': (_) => const LoginScreen(),
+  '/home': (_) => const MainApp(),
+  '/guest': (_) => const GuestApp(),
+},
     );
   }
 }

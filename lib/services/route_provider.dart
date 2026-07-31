@@ -4,12 +4,16 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'auth_service.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/address_model.dart';
 
 class RouteProvider extends ChangeNotifier {
   static const String _baseUrl = 'http://100.118.211.75:3000';
+  static const String _cacheKeyRoute = 'cached_route_json';
+  static const String _cacheKeyVehicleId = 'cached_route_vehicle_id';
 
   List<Address> _addresses = [];
   String? _activeRouteId;
@@ -18,6 +22,12 @@ class RouteProvider extends ChangeNotifier {
   String? _errorMessage;
   Timer? _syncTimer;
   int? _vehicleId;
+
+  // Ağ bağlantısı olmadığında, cihazda daha önce kaydedilmiş son rota
+  // gösteriliyorsa true olur. Kullanıcıya "çevrimdışı, eski veri" bilgisi
+  // vermek için kullanılır.
+  bool _isOffline = false;
+  DateTime? _cachedAt;
 
   bool _isOptimizing = false;
   String? _optimizeError;
@@ -33,10 +43,9 @@ class RouteProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   int? get vehicleId => _vehicleId;
+  bool get isOffline => _isOffline;
+  DateTime? get cachedAt => _cachedAt;
 
-  /// Araç seçici değiştiğinde çağrılır: state'i sıfırlayıp seçilen aracın
-  /// rotasını hemen çeker, sonraki 10sn'lik otomatik senkronizasyon da
-  /// bu araca göre devam eder.
   Future<void> switchVehicle(int vehicleId) async {
     if (_vehicleId == vehicleId) return;
     _vehicleId = vehicleId;
@@ -55,79 +64,122 @@ class RouteProvider extends ChangeNotifier {
   double get completionPercentage =>
       _addresses.isEmpty ? 0 : (completedStops / totalStops) * 100;
 
+  void _applyRouteData(Map<String, dynamic> decoded) {
+    final routeJson = _asMap(decoded['route_json']);
+    final stopsRaw = routeJson['stops'] ?? routeJson['addresses'] ?? [];
+    final stops = stopsRaw is List ? stopsRaw : [];
+
+    _activeRouteId = decoded['id']?.toString();
+    _activeRouteName = decoded['name']?.toString();
+    _addresses =
+        stops
+            .whereType<Map>()
+            .map((item) => item.cast<String, dynamic>())
+            .toList()
+            .asMap()
+            .entries
+            .map(
+              (entry) => Address.fromRouteStop(
+                entry.value,
+                fallbackOrder: entry.key + 1,
+              ),
+            )
+            .where(
+              (address) => address.latitude != 0 && address.longitude != 0,
+            )
+            .toList()
+          ..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
+  }
+
   Future<void> loadActiveRoute() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getInt('user_id');
+
+    if (userId == null) {
+      _addresses = [];
+      _activeRouteId = null;
+      _activeRouteName = null;
+      _errorMessage =
+          'Kullanıcı bilgisi bulunamadı. Lütfen tekrar giriş yapın.';
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getInt('user_id');
-
-      if (userId == null) {
-        _addresses = [];
-        _activeRouteId = null;
-        _activeRouteName = null;
-        _errorMessage =
-            'Kullanıcı bilgisi bulunamadı. Lütfen tekrar giriş yapın.';
-        return;
-      }
-
-      final uri = Uri.parse('$_baseUrl/routes/$userId/active').replace(
-        queryParameters: _vehicleId == null
-            ? null
-            : {'vehicle_id': _vehicleId.toString()},
-      );
-      final response = await http.get(uri);
+      final Uri uri = _vehicleId != null
+          ? Uri.parse('$_baseUrl/vehicles/$_vehicleId/active-route')
+          : Uri.parse('$_baseUrl/routes/$userId/active');
+     final response = await http
+          .get(uri, headers: await AuthService.authHeaders())
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 404) {
         _addresses = [];
         _activeRouteId = null;
         _activeRouteName = null;
         _errorMessage = null;
+        _isOffline = false;
+        await prefs.remove(_cacheKeyRoute);
         return;
       }
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        _errorMessage = 'Aktif rota alınamadı: ${response.statusCode}';
-        return;
+        throw Exception('Sunucu hatası: ${response.statusCode}');
       }
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      final routeJson = _asMap(decoded['route_json']);
-      final stopsRaw = routeJson['stops'] ?? routeJson['addresses'] ?? [];
-      final stops = stopsRaw is List ? stopsRaw : [];
-
-      _activeRouteId = decoded['id']?.toString();
-      _activeRouteName = decoded['name']?.toString();
-      _addresses =
-          stops
-              .whereType<Map>()
-              .map((item) => item.cast<String, dynamic>())
-              .toList()
-              .asMap()
-              .entries
-              .map(
-                (entry) => Address.fromRouteStop(
-                  entry.value,
-                  fallbackOrder: entry.key + 1,
-                ),
-              )
-              .where(
-                (address) => address.latitude != 0 && address.longitude != 0,
-              )
-              .toList()
-            ..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
-
+      _applyRouteData(decoded);
+      _isOffline = false;
+      _cachedAt = DateTime.now();
       _errorMessage = null;
-    } catch (e) {
-      final prefs = await SharedPreferences.getInstance();
-      final isGuest = prefs.getBool('is_guest') ?? true;
-      if (isGuest) {
-        _addresses = [];
-        _errorMessage = null;
+
+      // Başarılı veriyi cihaza kaydet — internet kesilirse ya da uygulama
+      // kapatılıp açılırsa bu son bilinen rota gösterilebilsin diye.
+      await prefs.setString(_cacheKeyRoute, jsonEncode(decoded));
+      await prefs.setString(
+        '${_cacheKeyRoute}_time',
+        _cachedAt!.toIso8601String(),
+      );
+      if (_vehicleId != null) {
+        await prefs.setInt(_cacheKeyVehicleId, _vehicleId!);
       } else {
-        _errorMessage = 'Rota yüklenirken hata oluştu: $e';
+        await prefs.remove(_cacheKeyVehicleId);
+      }
+    } catch (e) {
+      // Ağ hatası: cihazda daha önce kaydedilmiş bir rota varsa onu göster,
+      // kullanıcı tamamen boş bir ekranla karşılaşmasın.
+      final cachedJson = prefs.getString(_cacheKeyRoute);
+      final cachedVehicleId = prefs.getInt(_cacheKeyVehicleId);
+      final sameVehicle = _vehicleId == null
+          ? cachedVehicleId == null
+          : cachedVehicleId == _vehicleId;
+
+      if (cachedJson != null && sameVehicle) {
+        try {
+          final decoded = jsonDecode(cachedJson) as Map<String, dynamic>;
+          _applyRouteData(decoded);
+          _isOffline = true;
+          final cachedTimeRaw = prefs.getString('${_cacheKeyRoute}_time');
+          _cachedAt = cachedTimeRaw != null
+              ? DateTime.tryParse(cachedTimeRaw)
+              : null;
+          _errorMessage = null;
+        } catch (_) {
+          _errorMessage = 'Rota yüklenirken hata oluştu: $e';
+        }
+      } else {
+        final isGuest = prefs.getBool('is_guest') ?? true;
+        if (isGuest) {
+          _addresses = [];
+          _errorMessage = null;
+        } else {
+          _errorMessage = 'Rota yüklenirken hata oluştu: $e';
+        }
       }
     } finally {
       _isLoading = false;
@@ -149,7 +201,6 @@ class RouteProvider extends ChangeNotifier {
 
   Future<void> refresh() => loadActiveRoute();
 
-  // Sıra değiştir: şimdilik sadece local sıralama yapar.
   void reorder(int oldIndex, int newIndex) {
     if (newIndex > oldIndex) newIndex--;
     final item = _addresses.removeAt(oldIndex);
@@ -157,19 +208,16 @@ class RouteProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Haritadan yeni adres ekle: şimdilik sadece local ekleme yapar.
   void addAddress(Address address) {
     _addresses.add(address);
     notifyListeners();
   }
 
-  // Adresi sil: şimdilik sadece local silme yapar.
   void removeAddress(int index) {
     _addresses.removeAt(index);
     notifyListeners();
   }
 
-  // Tamamlandı işaretle ve backend'e gönder.
   Future<void> toggleCompleted(int index) async {
     if (index < 0 || index >= _addresses.length) return;
 
@@ -185,7 +233,7 @@ class RouteProvider extends ChangeNotifier {
         Uri.parse(
           '$_baseUrl/routes/$_activeRouteId/stops/${updated.id}/complete',
         ),
-        headers: {'Content-Type': 'application/json'},
+        headers: await AuthService.authHeaders(),
         body: jsonEncode({'completed': updated.isCompleted}),
       );
 
@@ -202,10 +250,6 @@ class RouteProvider extends ChangeNotifier {
     }
   }
 
-  // ── Rota Optimizasyonu ────────────────────────────────────────────
-  // Kullanıcının o anki GPS konumundan başlayıp, tüm tamamlanmamış
-  // durakları en kısa toplam mesafeyle gezecek sırayı backend'den alır
-  // ve _addresses listesini bu sıraya göre yeniden düzenler.
   Future<bool> optimizeRoute() async {
     if (_addresses.isEmpty) return false;
 
@@ -214,7 +258,6 @@ class RouteProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Kullanıcının o anki konumunu al
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         _optimizeError = 'Konum servisleri kapalı. Lütfen GPS\'i açın.';
@@ -237,7 +280,6 @@ class RouteProvider extends ChangeNotifier {
 
       final position = await Geolocator.getCurrentPosition();
 
-      // 2. Sadece henüz tamamlanmamış durakları optimize et
       final pendingAddresses =
           _addresses.where((a) => !a.isCompleted).toList();
       final completedAddresses =
@@ -248,10 +290,9 @@ class RouteProvider extends ChangeNotifier {
         return false;
       }
 
-      // 3. Backend'e istek at
       final response = await http.post(
         Uri.parse('$_baseUrl/routes/optimize'),
-        headers: {'Content-Type': 'application/json'},
+        headers: await AuthService.authHeaders(),
         body: jsonEncode({
           'origin': {
             'latitude': position.latitude,
@@ -275,13 +316,9 @@ class RouteProvider extends ChangeNotifier {
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       final optimizedOrder = List<int>.from(decoded['optimizedOrder']);
 
-      // 4. _addresses listesini yeni sıraya göre düzenle
-      //    (tamamlanmış duraklar en başta sabit kalır, tamamlanmamışlar
-      //     optimize edilmiş sırayla arkasından eklenir)
       final reordered = optimizedOrder.map((i) => pendingAddresses[i]).toList();
       _addresses = [...completedAddresses, ...reordered];
 
-      // orderNumber alanlarını da güncelle (görsel sıralama için)
       for (int i = 0; i < _addresses.length; i++) {
         _addresses[i] = _addresses[i].copyWith(orderNumber: i + 1);
       }

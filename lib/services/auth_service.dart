@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
@@ -19,6 +20,11 @@ class AuthService {
       final body = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
+        final role = body["role"] as String?;
+        if (role != null && role != "driver") {
+          return 'Bu hesap sürücü hesabı değil, mobil uygulamaya giriş yapamaz.';
+        }
+
         final prefs = await SharedPreferences.getInstance();
 
         final userId = body["user_id"];
@@ -29,8 +35,29 @@ class AuthService {
           );
         }
 
+        final vehicleId = body["vehicle_id"];
+        if (vehicleId != null) {
+          await prefs.setInt(
+            "assigned_vehicle_id",
+            vehicleId is int ? vehicleId : int.parse(vehicleId.toString()),
+          );
+        } else {
+          await prefs.remove("assigned_vehicle_id");
+        }
+
+        final authToken = body["token"];
+        if (authToken != null) {
+          await prefs.setString("auth_token", authToken.toString());
+        }
+
         await prefs.setBool(_keyLoggedIn, true);
         await prefs.setString(_keyUsername, username);
+
+        if (userId != null) {
+          final resolvedUserId = userId is int ? userId : int.parse(userId.toString());
+          await NotificationService.syncTokenAfterLogin(resolvedUserId);
+        }
+
         return null;
       } else {
         return body['error'] ?? 'Kullanıcı adı veya şifre hatalı';
@@ -58,5 +85,14 @@ class AuthService {
   static Future<String> getUsername() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyUsername) ?? '';
+  }
+
+  static Future<Map<String, String>> authHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
   }
 }

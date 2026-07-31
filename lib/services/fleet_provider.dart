@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'auth_service.dart';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -15,13 +16,15 @@ class FleetProvider extends ChangeNotifier {
   Map<String, dynamic>? _workspace;
   DateTime? _updatedAt;
   Timer? _syncTimer;
+  bool _syncFailed = false;
 
   FleetProvider() {
     startAutoSync();
   }
 
-  Map<String, dynamic>? get workspace => _workspace;
+ Map<String, dynamic>? get workspace => _workspace;
   DateTime? get updatedAt => _updatedAt;
+  bool get syncFailed => _syncFailed;
 
   Map<String, dynamic>? get fixedHome =>
       _workspace?['fixedHome'] as Map<String, dynamic>?;
@@ -45,10 +48,11 @@ class FleetProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getInt('user_id');
       if (userId == null) return;
-
-      final response = await http.get(
+final response = await http.get(
         Uri.parse('$_baseUrl/fleet/$userId'),
+        headers: await AuthService.authHeaders(),
       );
+      
 
       if (response.statusCode < 200 || response.statusCode >= 300) return;
 
@@ -58,10 +62,16 @@ class FleetProvider extends ChangeNotifier {
 
       _workspace = entry?['workspace'] as Map<String, dynamic>?;
       final updatedAtRaw = entry?['updatedAt'] as String?;
-      _updatedAt = updatedAtRaw != null ? DateTime.tryParse(updatedAtRaw) : null;
+      _updatedAt = updatedAtRaw != null
+          ? DateTime.tryParse(updatedAtRaw)
+          : null;
+      _syncFailed = false;
       notifyListeners();
     } catch (_) {
-      // Filo durumu çekilemezse sessizce yoksay, rota akışını bozmasın.
+      // Rota akışını bozmamak için sayfayı kilitlemiyoruz, ama durumu
+      // dışarıya bildiriyoruz ki UI küçük bir uyarı gösterebilsin.
+      _syncFailed = true;
+      notifyListeners();
     }
   }
 
