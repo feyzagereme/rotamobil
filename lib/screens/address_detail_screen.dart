@@ -13,10 +13,10 @@ class AddressDetailScreen extends StatefulWidget {
   final int index;
 
   const AddressDetailScreen({
-    Key? key,
+    super.key,
     required this.address,
     required this.index,
-  }) : super(key: key);
+  });
 
   @override
   State<AddressDetailScreen> createState() => _AddressDetailScreenState();
@@ -288,7 +288,7 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                       Expanded(
                         child: _actionCard(Icons.share_rounded, 'Kopyala', AppColors.textMid, () async {
                           await Clipboard.setData(ClipboardData(text: address.fullAddress));
-                          if (!mounted) return;
+                          if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: const Text('Adres panoya kopyalandı'),

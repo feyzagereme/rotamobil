@@ -55,13 +55,17 @@ class _GuestMapScreenState extends State<GuestMapScreen> {
         final short = road.isNotEmpty
             ? '$road${district.isNotEmpty ? ', $district' : ''}'
             : (json['display_name'] as String).split(',').take(2).join(',');
-        if (mounted) setState(() { _pendingText = short; _isGeocoding = false; });
+        if (mounted) {
+          setState(() { _pendingText = short; _isGeocoding = false; });
+        }
       }
     } catch (_) {
-      if (mounted) setState(() {
-        _pendingText = '${latlng.latitude.toStringAsFixed(4)}, ${latlng.longitude.toStringAsFixed(4)}';
-        _isGeocoding = false;
-      });
+      if (mounted) {
+        setState(() {
+          _pendingText = '${latlng.latitude.toStringAsFixed(4)}, ${latlng.longitude.toStringAsFixed(4)}';
+          _isGeocoding = false;
+        });
+      }
     }
   }
 

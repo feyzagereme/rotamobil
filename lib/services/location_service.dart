@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LocationService {
-  static const _baseUrl = 'https://route-backend-jeu7.onrender.com';
+  static const _baseUrl = 'http://100.118.211.75:3000';
   static Timer? _timer;
   static bool _isRunning = false;
 

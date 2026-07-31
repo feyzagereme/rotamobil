@@ -5,7 +5,7 @@ import '../theme/app_colors.dart';
 import 'address_detail_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({Key? key}) : super(key: key);
+  const DashboardScreen({super.key});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -280,7 +280,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               // ── Sürüklenebilir rota listesi
               SliverReorderableList(
                 itemCount: addresses.length,
-                onReorder: provider.reorder,
+                onReorderItem: provider.reorder,
                 itemBuilder: (ctx, index) {
                   final address = addresses[index];
                   return Material(

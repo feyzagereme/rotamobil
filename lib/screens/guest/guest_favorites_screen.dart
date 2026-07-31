@@ -25,13 +25,15 @@ class _GuestFavoritesScreenState extends State<GuestFavoritesScreen> {
     final addresses = await GuestRouteService.loadAddresses();
     final exists = addresses.any((a) => a.id == address.id);
     if (exists) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Bu durak zaten rotada'),
-        backgroundColor: const Color(0xFFF59E0B),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(12),
-      ));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('Bu durak zaten rotada'),
+          backgroundColor: const Color(0xFFF59E0B),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(12),
+        ));
+      }
       return;
     }
     addresses.add(GuestAddress(
@@ -40,13 +42,15 @@ class _GuestFavoritesScreenState extends State<GuestFavoritesScreen> {
       latitude: address.latitude, longitude: address.longitude,
     ));
     await GuestRouteService.saveAddresses(addresses);
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('Rotaya eklendi'),
-      backgroundColor: const Color(0xFF22C55E),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      margin: const EdgeInsets.all(12),
-    ));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Rotaya eklendi'),
+        backgroundColor: const Color(0xFF22C55E),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(12),
+      ));
+    }
   }
 
   Future<void> _remove(int id) async {

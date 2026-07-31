@@ -9,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/address_model.dart';
 
 class RouteProvider extends ChangeNotifier {
-  static const String _baseUrl = 'https://route-backend-jeu7.onrender.com';
+  static const String _baseUrl = 'http://100.118.211.75:3000';
 
   List<Address> _addresses = [];
   String? _activeRouteId;
@@ -295,42 +295,6 @@ class RouteProvider extends ChangeNotifier {
       _isOptimizing = false;
       notifyListeners();
     }
-  }
-
-  void _loadMockData() {
-    _activeRouteId = 'mock-1';
-    _activeRouteName = 'Test Rotası';
-    _addresses = [
-      Address(
-        id: 1, orderNumber: 1,
-        street: 'Atatürk Caddesi No:12', district: 'Altındağ', city: 'Tekirdağ',
-        postalCode: '59100', country: 'Türkiye',
-        latitude: 40.9833, longitude: 27.5167,
-        customerName: 'Ahmet Yılmaz', customerType: 'visit',
-      ),
-      Address(
-        id: 2, orderNumber: 2,
-        street: 'Cumhuriyet Sokak No:5', district: 'Süleymanpaşa', city: 'Tekirdağ',
-        postalCode: '59100', country: 'Türkiye',
-        latitude: 40.9800, longitude: 27.5100,
-        customerName: 'Fatma Kaya', customerType: 'visit',
-      ),
-      Address(
-        id: 3, orderNumber: 3,
-        street: 'İnönü Bulvarı No:33', district: 'Ergene', city: 'Tekirdağ',
-        postalCode: '59100', country: 'Türkiye',
-        latitude: 40.9750, longitude: 27.5200,
-        customerName: 'Mehmet Demir', customerType: 'visit',
-      ),
-      Address(
-        id: 4, orderNumber: 4,
-        street: 'Barbaros Mahallesi No:8', district: 'Çorlu', city: 'Tekirdağ',
-        postalCode: '59860', country: 'Türkiye',
-        latitude: 41.1500, longitude: 27.8000,
-        customerName: 'Ayşe Çelik', customerType: 'visit',
-      ),
-    ];
-    _errorMessage = null;
   }
 
   Map<String, dynamic> _asMap(dynamic value) {

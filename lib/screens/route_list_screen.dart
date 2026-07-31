@@ -11,7 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class RouteListScreen extends StatefulWidget {
-  const RouteListScreen({Key? key}) : super(key: key);
+  const RouteListScreen({super.key});
 
   @override
   State<RouteListScreen> createState() => _RouteListScreenState();
@@ -43,7 +43,7 @@ class _RouteListScreenState extends State<RouteListScreen> {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getInt("user_id") ?? 1;
       final response = await http.get(
-        Uri.parse("https://route-backend-jeu7.onrender.com/routes/$userId"),
+        Uri.parse("http://100.118.211.75:3000/routes/$userId"),
       );
       if (response.statusCode == 200) {
         setState(() { _backendRoutes = jsonDecode(response.body); _isLoadingRoutes = false; });
@@ -256,7 +256,7 @@ class _RouteListScreenState extends State<RouteListScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 sliver: SliverReorderableList(
                   itemCount: addresses.length,
-                  onReorder: _onReorder,
+                  onReorderItem: _onReorder,
                   itemBuilder: (context, index) {
                     final address = addresses[index];
                     return ReorderableDragStartListener(

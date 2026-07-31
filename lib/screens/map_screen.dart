@@ -10,7 +10,7 @@ import '../models/address_model.dart';
 import '../theme/app_colors.dart';
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({Key? key}) : super(key: key);
+  const MapScreen({super.key});
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -98,10 +98,12 @@ class _MapScreenState extends State<MapScreen> {
         if (mounted) setState(() { _pendingAddressText = short; _isGeocoding = false; });
       }
     } catch (_) {
-      if (mounted) setState(() {
-        _pendingAddressText = '${latlng.latitude.toStringAsFixed(5)}, ${latlng.longitude.toStringAsFixed(5)}';
-        _isGeocoding = false;
-      });
+      if (mounted) {
+        setState(() {
+          _pendingAddressText = '${latlng.latitude.toStringAsFixed(5)}, ${latlng.longitude.toStringAsFixed(5)}';
+          _isGeocoding = false;
+        });
+      }
     }
   }
 

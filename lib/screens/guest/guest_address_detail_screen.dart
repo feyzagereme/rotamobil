@@ -35,13 +35,15 @@ class _GuestAddressDetailScreenState extends State<GuestAddressDetailScreen> {
       await GuestRouteService.saveFavorite(widget.address);
     }
     setState(() => _isFavorite = !_isFavorite);
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(_isFavorite ? 'Favorilere eklendi' : 'Favorilerden çıkarıldı'),
-      backgroundColor: _isFavorite ? const Color(0xFF22C55E) : const Color(0xFF5A6A85),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      margin: const EdgeInsets.all(12),
-    ));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_isFavorite ? 'Favorilere eklendi' : 'Favorilerden çıkarıldı'),
+        backgroundColor: _isFavorite ? const Color(0xFF22C55E) : const Color(0xFF5A6A85),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(12),
+      ));
+    }
   }
 
   Future<void> _launchNavigation() async {
