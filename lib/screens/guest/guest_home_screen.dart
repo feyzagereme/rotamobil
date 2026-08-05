@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/guest/guest_route_service.dart';
+import '../../services/guest/tomtom_routing_service.dart';
 import 'guest_map_screen.dart';
 import 'guest_address_detail_screen.dart';
 
@@ -14,7 +15,10 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
   List<GuestAddress> _addresses = [];
   List<GuestAddress> _sortedAddresses = [];
   bool _routeCalculated = false;
+  bool _isCalculating = false;
+  bool _usedTraffic = false;
   double _totalKm = 0;
+  int? _totalMinutes;
   final double _startLat = 40.9833;
   final double _startLon = 27.5167;
 
@@ -33,16 +37,36 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
     });
   }
 
-  void _calculateRoute() {
+  Future<void> _calculateRoute() async {
     if (_addresses.isEmpty) return;
     HapticFeedback.mediumImpact();
-    final sorted = GuestRouteService.calculateShortestRoute(
+    setState(() => _isCalculating = true);
+
+    final tomtomResult = await TomTomRoutingService.calculateOptimizedRoute(
         _addresses, _startLat, _startLon);
-    final km = GuestRouteService.totalDistance(sorted, _startLat, _startLon);
+
+    List<GuestAddress> sorted;
+    double km;
+    int? minutes;
+    if (tomtomResult != null) {
+      sorted = tomtomResult.orderedAddresses;
+      km = tomtomResult.totalDistanceKm;
+      minutes = tomtomResult.totalDurationMinutes;
+    } else {
+      sorted = GuestRouteService.calculateShortestRoute(
+          _addresses, _startLat, _startLon);
+      km = GuestRouteService.totalDistance(sorted, _startLat, _startLon);
+      minutes = null;
+    }
+
+    if (!mounted) return;
     setState(() {
       _sortedAddresses = sorted;
       _totalKm = km;
+      _totalMinutes = minutes;
+      _usedTraffic = tomtomResult != null;
       _routeCalculated = true;
+      _isCalculating = false;
     });
     GuestRouteService.saveAddresses(sorted);
   }
@@ -164,7 +188,9 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                         const SizedBox(width: 20),
                         _headerStat('${_totalKm.toStringAsFixed(1)} km', 'Mesafe'),
                         const SizedBox(width: 20),
-                        _headerStat('~${(_totalKm / 40 * 60).toInt()} dk', 'Süre'),
+                        _headerStat(
+                            '~${_totalMinutes ?? (_totalKm / 40 * 60).toInt()} dk',
+                            'Süre'),
                       ]),
                     ],
                   ],
@@ -193,10 +219,17 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                           child: SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
-                              onPressed: _calculateRoute,
-                              icon: const Icon(Icons.alt_route_rounded, size: 20),
-                              label: const Text('En Kısa Rotayı Hesapla',
-                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                              onPressed: _isCalculating ? null : _calculateRoute,
+                              icon: _isCalculating
+                                  ? const SizedBox(
+                                      width: 18, height: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Icon(Icons.alt_route_rounded, size: 20),
+                              label: Text(
+                                  _isCalculating ? 'Rota Hesaplanıyor...' : 'En Kısa Rotayı Hesapla',
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF0D47A1),
                                 foregroundColor: Colors.white,
@@ -220,12 +253,20 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                                   color: const Color(0xFF22C55E).withValues(alpha: 0.3)),
                             ),
                             child: Row(children: [
-                              const Icon(Icons.check_circle_rounded,
-                                  color: Color(0xFF22C55E), size: 18),
+                              Icon(
+                                  _usedTraffic
+                                      ? Icons.traffic_rounded
+                                      : Icons.check_circle_rounded,
+                                  color: const Color(0xFF22C55E), size: 18),
                               const SizedBox(width: 8),
-                              Text('En kısa rota hesaplandı · $completed/${displayList.length} tamamlandı',
-                                  style: const TextStyle(fontSize: 13,
-                                      color: Color(0xFF22C55E), fontWeight: FontWeight.w600)),
+                              Expanded(
+                                child: Text(
+                                    _usedTraffic
+                                        ? 'Trafik bilgili en kısa rota hesaplandı · $completed/${displayList.length} tamamlandı'
+                                        : 'En kısa rota hesaplandı · $completed/${displayList.length} tamamlandı',
+                                    style: const TextStyle(fontSize: 13,
+                                        color: Color(0xFF22C55E), fontWeight: FontWeight.w600)),
+                              ),
                             ]),
                           ),
                         ),
