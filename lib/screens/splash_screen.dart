@@ -117,17 +117,15 @@ class _SplashScreenState extends State<SplashScreen>
                           width: 96,
                           height: 96,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.12),
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: Colors.white.withValues(alpha: 0.2),
                               width: 1.5,
                             ),
-                          ),
-                          child: const Icon(
-                            Icons.route_rounded,
-                            size: 48,
-                            color: AppColors.accent,
+                            image: const DecorationImage(
+                              image: AssetImage('assets/icon/app_icon.png'),
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 28),

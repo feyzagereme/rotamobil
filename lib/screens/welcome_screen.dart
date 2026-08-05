@@ -17,13 +17,14 @@ class WelcomeScreen extends StatelessWidget {
               Container(
                 width: 64, height: 64,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF53D6FF).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
                       color: const Color(0xFF53D6FF).withValues(alpha: 0.3)),
+                  image: const DecorationImage(
+                    image: AssetImage('assets/icon/app_icon.png'),
+                    fit: BoxFit.cover,
+                  ),
                 ),
-                child: const Icon(Icons.route_rounded,
-                    color: Color(0xFF53D6FF), size: 32),
               ),
 
               const SizedBox(height: 32),
