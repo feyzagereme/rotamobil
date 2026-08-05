@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
-import '../services/mock_data_service.dart';
 import '../services/route_provider.dart';
-import '../models/driver_model.dart';
 import '../theme/app_colors.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -14,19 +12,14 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  late Driver driver;
-  late bool notificationsEnabled;
-  late bool gpsEnabled;
-  late bool voiceGuidanceEnabled;
+  bool notificationsEnabled = true;
+  bool gpsEnabled = true;
+  bool voiceGuidanceEnabled = true;
   String _username = '';
 
   @override
   void initState() {
     super.initState();
-    driver = MockDataService.getMockDriver();
-    notificationsEnabled = driver.notificationsEnabled;
-    gpsEnabled = driver.gpsEnabled;
-    voiceGuidanceEnabled = driver.voiceGuidanceEnabled;
     _loadUsername();
   }
 
