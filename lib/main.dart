@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'screens/login_screen.dart';
+import 'screens/register_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/route_list_screen.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'screens/calendar_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/guest/guest_app.dart';
@@ -22,19 +23,25 @@ import 'theme/app_colors.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: kIsWeb
-        ? const FirebaseOptions(
-            apiKey: "AIzaSyDNntalqnmuOiJrgrpahfI3RRg8r9cM91w",
-            authDomain: "rota360-35ce3.firebaseapp.com",
-            projectId: "rota360-35ce3",
-            storageBucket: "rota360-35ce3.firebasestorage.app",
-            messagingSenderId: "434121736536",
-            appId: "1:434121736536:web:e8a409cb916d03dec7e52d",
-          )
-        : null,
-  );
-  await NotificationService.initialize();
+  try {
+    await Firebase.initializeApp(
+      options: kIsWeb
+          ? const FirebaseOptions(
+              apiKey: "AIzaSyDNntalqnmuOiJrgrpahfI3RRg8r9cM91w",
+              authDomain: "rota360-35ce3.firebaseapp.com",
+              projectId: "rota360-35ce3",
+              storageBucket: "rota360-35ce3.firebasestorage.app",
+              messagingSenderId: "434121736536",
+              appId: "1:434121736536:web:e8a409cb916d03dec7e52d",
+            )
+          : null,
+    );
+    await NotificationService.initialize();
+  } catch (e) {
+    // GoogleService-Info.plist eksikse (iOS) Firebase burada patlar; push
+    // bildirimleri olmadan da uygulama açılabilmeli.
+    debugPrint('Firebase baslatilamadi, bildirimler devre disi: $e');
+  }
   await initializeDateFormatting('tr_TR');
   final loggedIn = await AuthService.isLoggedIn();
   runApp(
@@ -98,6 +105,7 @@ class RotaMobilApp extends StatelessWidget {
   '/splash': (_) => const SplashScreen(),
   '/welcome': (_) => const WelcomeScreen(),
   '/login': (_) => const LoginScreen(),
+  '/register': (_) => const RegisterScreen(),
   '/home': (_) => const MainApp(),
   '/guest': (_) => const GuestApp(),
 },

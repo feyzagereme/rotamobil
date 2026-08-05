@@ -277,7 +277,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pushNamed('/register'),
+                  child: const Text(
+                    'Hesabın yok mu? Kayıt Ol',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
                 const Text(
                   'Tekirdağ Şehir Hastanesi\nPalyatif Bakım Birimi',
                   textAlign: TextAlign.center,
