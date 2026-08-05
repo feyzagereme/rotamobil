@@ -5,6 +5,7 @@ import '../services/route_provider.dart';
 import 'address_detail_screen.dart';
 import '../models/address_model.dart';
 import '../theme/app_colors.dart';
+import '../config/app_config.dart';
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -43,7 +44,7 @@ class _RouteListScreenState extends State<RouteListScreen> {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getInt("user_id") ?? 1;
       final response = await http.get(
-        Uri.parse("http://100.118.211.75:3000/routes/$userId"),
+        Uri.parse("${AppConfig.backendBaseUrl}/routes/$userId"),
       );
       if (response.statusCode == 200) {
         setState(() { _backendRoutes = jsonDecode(response.body); _isLoadingRoutes = false; });

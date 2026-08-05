@@ -9,9 +9,10 @@ import 'auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/address_model.dart';
+import '../config/app_config.dart';
 
 class RouteProvider extends ChangeNotifier {
-  static const String _baseUrl = 'http://100.118.211.75:3000';
+  static const String _baseUrl = AppConfig.backendBaseUrl;
   static const String _cacheKeyRoute = 'cached_route_json';
   static const String _cacheKeyVehicleId = 'cached_route_vehicle_id';
 

@@ -4,9 +4,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 
 class LocationService {
-  static const _baseUrl = 'http://100.118.211.75:3000';
+  static const _baseUrl = AppConfig.backendBaseUrl;
   static Timer? _timer;
   static bool _isRunning = false;
   static bool _lastSendFailed = false;

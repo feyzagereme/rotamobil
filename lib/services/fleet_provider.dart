@@ -5,12 +5,13 @@ import 'auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 
 /// Masaüstünden senkronize edilen filo (araç bazlı çalışma alanı) durumunu
 /// 10 saniyede bir çeker: sabit başlangıç adresi, kuyruktan düşürülen
 /// adresler, tekrar tipleri.
 class FleetProvider extends ChangeNotifier {
-  static const String _baseUrl = 'http://100.118.211.75:3000';
+  static const String _baseUrl = AppConfig.backendBaseUrl;
 
   int? _vehicleId;
   Map<String, dynamic>? _workspace;

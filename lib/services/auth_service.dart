@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://100.118.211.75:3000';
+  static const String baseUrl = AppConfig.backendBaseUrl;
   static const String _keyLoggedIn = 'is_logged_in';
   static const String _keyUsername = 'username';
 
