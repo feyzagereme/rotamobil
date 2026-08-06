@@ -1,6 +1,6 @@
 # Rota360 Mobil Uygulaması — Gizlilik Politikası ve KVKK Aydınlatma Metni
 
-**Son güncelleme tarihi:** [TARİH GİRİLECEK]
+**Son güncelleme tarihi:** 6 Ağustos 2026
 
 > ⚠️ **Önemli not:** Bu metin, App Store / Play Store başvurusu için makul bir başlangıç taslağı olarak hazırlanmıştır. Sağlık kurumu bağlamında çalıştığı ve sürücü konum takibi içerdiği için, gerçek/canlı kullanıma geçmeden önce bir avukat veya KVKK danışmanı tarafından gözden geçirilmesi önerilir. Köşeli parantez içindeki `[...]` alanlar mutlaka doldurulmalıdır.
 
@@ -10,10 +10,10 @@
 
 **Rota360** mobil uygulaması ("Uygulama"), aşağıda bilgileri yer alan veri sorumlusu tarafından işletilmektedir:
 
-- **Unvan / Ad Soyad:** [ŞİRKET UNVANI VEYA GERÇEK KİŞİ ADI GİRİLECEK]
-- **Adres:** [ADRES GİRİLECEK]
-- **E-posta:** [İLETİŞİM E-POSTASI GİRİLECEK]
-- **KVKK başvuruları için:** [KVKK BAŞVURU E-POSTASI / VERBİS NUMARASI VARSA GİRİLECEK]
+- **Unvan / Ad Soyad:** Arjin Özceylan (şahıs)
+- **Adres:** Turgutalp Mahallesi, Hacıyamak Caddesi, No: 22, Soma / Manisa
+- **E-posta:** 360.rotaa@gmail.com
+- **KVKK başvuruları için:** 360.rotaa@gmail.com
 
 Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") m.10 uyarınca aydınlatma yükümlülüğünün yerine getirilmesi amacıyla hazırlanmıştır.
 
@@ -21,9 +21,11 @@ Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") m.10 uyar�
 
 ## 2. Uygulamanın Amacı ve Kapsamı
 
-Rota360, [HASTANE ADI GİRİLECEK — örn. Tekirdağ Şehir Hastanesi] bünyesinde çalışan saha personelinin (sürücü/kurye) günlük teslimat/ziyaret rotalarını görüntülemesi, sırayla navigasyon yapması ve tamamlanan durakları işaretlemesi amacıyla kullanılan bir kurum içi saha operasyon uygulamasıdır. Uygulama, genel kamuya açık bir tüketici uygulaması değildir; yalnızca yetkilendirilmiş personel tarafından kullanılır.
+Rota360, birden fazla durağı en kısa/en hızlı şekilde dolaşmak isteyen herkesin ücretsiz olarak kullanabileceği bir rota planlama ve optimizasyon uygulamasıdır. Kayıt olmadan "misafir" modunda kullanılabildiği gibi, kurumsal bir hesapla giriş yapan personel için de atanmış rota/durak listelerini görüntüleme imkânı sunar.
 
-**Misafir modu:** Uygulama, kayıt olmadan "misafir" olarak da kullanılabilir. Misafir modunda oluşturulan rota/adres verileri yalnızca kullanıcının kendi cihazında saklanır, sunucularımıza aktarılmaz.
+**Misafir modu:** Misafir modunda oluşturulan rota/adres verileri yalnızca kullanıcının kendi cihazında saklanır, sunucularımıza aktarılmaz. Rota hesaplaması için (trafik bilgisi dahil) yalnızca girilen durak koordinatları, kimliğinizle ilişkilendirilmeden, rota hesaplama hizmeti sağlayan üçüncü bir servise (TomTom) iletilir.
+
+**Kurumsal/personel girişi:** Bir kuruma bağlı personel hesabıyla giriş yapıldığında, aşağıdaki 3. bölümde açıklanan ek veri kategorileri (konum, hesap bilgisi vb.) işlenir.
 
 ---
 
@@ -31,11 +33,11 @@ Rota360, [HASTANE ADI GİRİLECEK — örn. Tekirdağ Şehir Hastanesi] bünyesi
 
 | Kategori | Örnek Veri | Kaynağı |
 |---|---|---|
-| Kimlik ve hesap bilgileri | Kullanıcı adı, kullanıcı ID'si, atanmış araç bilgisi | Kullanıcının girişi |
-| İşlem güvenliği bilgileri | Şifre (yalnızca şifrelenmiş/hash'lenmiş biçimde sunucuda tutulur, cihazda oturum belirteci — JWT token — saklanır) | Kullanıcının girişi |
-| Konum verisi | Anlık GPS konumu (kullanım sırasında, yaklaşık her 3 dakikada bir sunucuya iletilir) | Cihaz konum servisleri (kullanıcı izniyle) |
+| Kimlik ve hesap bilgileri | Kullanıcı adı, kullanıcı ID'si, atanmış araç bilgisi | Personel girişi (yalnızca kurumsal hesaplar) |
+| İşlem güvenliği bilgileri | Şifre (yalnızca şifrelenmiş/hash'lenmiş biçimde sunucuda tutulur, cihazda oturum belirteci — JWT token — saklanır) | Personel girişi |
+| Konum verisi | Anlık GPS konumu (yaklaşık her 3 dakikada bir sunucuya iletilir) | Cihaz konum servisleri — **yalnızca kurumsal hesapla giriş yapıldığında**, kullanıcı izniyle. Misafir modunda cihaz konumu hiç okunmaz. |
 | İletişim/bildirim verisi | Firebase Cloud Messaging cihaz belirteci (push bildirim token'ı) | Cihaz, bildirim izni verildiğinde |
-| Operasyonel/rota verisi | Ziyaret edilecek adresler, adres kodları, durak tamamlanma durumu, rota geçmişi | Kurumun planlama sisteminden aktarılan, kimliksizleştirilmiş (yalnızca adres kodu + adres içeren) rota verisi |
+| Operasyonel/rota verisi | Ziyaret edilecek adresler, durak tamamlanma durumu, rota geçmişi | Kullanıcı girişi (misafir: yalnızca cihazda) veya kurumun planlama sistemi (personel: sunucu üzerinden) |
 
 > **Not:** Hasta adı, T.C. kimlik numarası, telefon numarası gibi hastaya ait kimliği belirleyici özel nitelikli veriler bu uygulamaya **aktarılmaz**; bu veriler kurumun kendi iç/lokal sisteminde kalır. Uygulamaya yalnızca adres ve kurum içi adres kodu (örn. "M001") ulaşır.
 
@@ -54,13 +56,14 @@ Rota360, [HASTANE ADI GİRİLECEK — örn. Tekirdağ Şehir Hastanesi] bünyesi
 
 ## 5. Hukuki Sebep
 
-Kişisel veriler; KVKK m.5/2-(c) "bir sözleşmenin kurulması veya ifasıyla doğrudan doğruya ilgili olması" (iş/görevlendirme ilişkisi kapsamında) ve m.5/2-(f) "veri sorumlusunun meşru menfaati" hukuki sebeplerine dayanılarak işlenmektedir. Konum verisinin işlenmesi, sürücünün **açık rızasına** ve cihaz üzerinden verdiği konum izni onayına dayanmaktadır; konum izni istenildiği zaman cihaz ayarlarından geri alınabilir.
+Misafir kullanıcılar için kişisel veri işlenmesi, uygulamanın temel işlevini (rota hesaplama) yerine getirebilmesi amacıyla KVKK m.5/2-(f) "veri sorumlusunun meşru menfaati" hukuki sebebine dayanır ve veriler cihazda kalır. Kurumsal personel için ise KVKK m.5/2-(c) "bir sözleşmenin kurulması veya ifasıyla doğrudan doğruya ilgili olması" (iş/görevlendirme ilişkisi) hukuki sebebine dayanılır. Konum verisinin işlenmesi her durumda kullanıcının **açık rızasına** ve cihaz üzerinden verdiği konum izni onayına dayanır; izin istenildiği zaman cihaz ayarlarından geri alınabilir.
 
 ---
 
 ## 6. Kişisel Verilerin Aktarılması
 
-- Konum, hesap ve rota verileri, uygulamanın çalışması için gerekli sunucu altyapısına ([SUNUCU/HOSTING SAĞLAYICISI ADI GİRİLECEK — örn. Render, kurumun kendi sunucusu vb.]) aktarılır.
+- Kurumsal hesap verileri, herhangi bir bulut/üçüncü taraf hosting sağlayıcısına aktarılmaz; kurumun kendi bilgisayarında/ağında yerel olarak barındırılan bir veritabanı ve sunucuda saklanır.
+- Misafir modunda rota hesaplaması için durak koordinatları, kimlikle ilişkilendirilmeden TomTom (TomTom International B.V.) rota hesaplama servisine iletilir.
 - Push bildirimler için cihaz token'ı Google Firebase Cloud Messaging altyapısına iletilir (Google LLC, ABD merkezli — yurt dışı veri aktarımı kapsamında değerlendirilir).
 - Veriler, kanunen yetkili kamu kurum ve kuruluşları haricinde üçüncü taraflarla **pazarlama, reklam veya başka bir ticari amaçla paylaşılmaz, satılmaz.**
 
@@ -86,19 +89,19 @@ KVKK m.11 uyarınca her veri sahibi:
 - Otomatik sistemlerle analiz sonucu aleyhe bir sonucun ortaya çıkmasına itiraz etme,
 - Kanuna aykırı işlenme sebebiyle zarara uğraması hâlinde zararın giderilmesini talep etme
 
-haklarına sahiptir. Bu haklara ilişkin taleplerinizi [KVKK BAŞVURU E-POSTASI] adresine iletebilirsiniz.
+haklarına sahiptir. Bu haklara ilişkin taleplerinizi 360.rotaa@gmail.com adresine iletebilirsiniz.
 
 ---
 
 ## 9. Konum İzni Hakkında
 
-Uygulama, yalnızca **uygulama kullanımdayken** ("when in use") konum bilgisine erişir; arka planda sürekli konum takibi yapılmaz. Konum izni, cihaz işletim sistemi ayarlarından istendiği zaman iptal edilebilir; ancak bu durumda aktif rota takibi ve en yakın durak gösterimi gibi özellikler çalışmayabilir.
+Uygulama, yalnızca kurumsal hesapla giriş yapıldığında ve **uygulama kullanımdayken** ("when in use") konum bilgisine erişir; arka planda sürekli konum takibi yapılmaz. Misafir modunda cihaz konumu hiçbir şekilde okunmaz. Konum izni, cihaz işletim sistemi ayarlarından istendiği zaman iptal edilebilir.
 
 ---
 
 ## 10. Çocukların Gizliliği
 
-Uygulama, kurum personeli tarafından kullanılmak üzere tasarlanmıştır ve 18 yaş altı kullanıcılara yönelik değildir.
+Uygulama genel kullanıcılara açık olmakla birlikte, 13 yaş altı çocuklardan bilerek veri toplanmaz.
 
 ---
 
@@ -108,4 +111,4 @@ Bu politika zaman zaman güncellenebilir. Önemli değişiklikler olması hâlin
 
 ---
 
-**İletişim:** Bu politika veya kişisel verilerinizin işlenmesiyle ilgili sorularınız için [İLETİŞİM E-POSTASI] adresinden bize ulaşabilirsiniz.
+**İletişim:** Bu politika veya kişisel verilerinizin işlenmesiyle ilgili sorularınız için 360.rotaa@gmail.com adresinden bize ulaşabilirsiniz.

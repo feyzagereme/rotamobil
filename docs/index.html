@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rota360 — Destek</title>
+<style>
+  :root {
+    color-scheme: light dark;
+  }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #F0F4F8;
+    color: #1A2236;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0A1628; color: #F0F4F8; }
+    .card { background: #0F1929 !important; border-color: rgba(255,255,255,0.1) !important; }
+    .muted { color: #9DAFC8 !important; }
+  }
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 48px 20px 80px;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .logo-badge {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: #0D47A1;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 800; font-size: 15px;
+  }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  .tagline { color: #5A6A85; margin: 0 0 32px; font-size: 15px; }
+  .card {
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .card h2 { font-size: 16px; margin: 0 0 10px; }
+  .card p { font-size: 14px; line-height: 1.6; margin: 0 0 10px; color: inherit; }
+  .muted { color: #5A6A85; font-size: 13px; }
+  a { color: #0D47A1; }
+  @media (prefers-color-scheme: dark) { a { color: #53D6FF; } }
+  footer { margin-top: 40px; font-size: 12px; color: #9DAFC8; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">
+      <div class="logo-badge">R</div>
+      <div>
+        <h1 style="margin:0;">Rota360</h1>
+      </div>
+    </div>
+    <p class="tagline">Trafik bilgili rota planlama ve optimizasyon uygulaması</p>
+
+    <div class="card">
+      <h2>Destek</h2>
+      <p>Rota360 ile ilgili bir sorunuz, geri bildiriminiz veya karşılaştığınız bir hata mı var? Bize aşağıdaki adresten ulaşabilirsiniz:</p>
+      <p><strong><a href="mailto:360.rotaa@gmail.com">360.rotaa@gmail.com</a></strong></p>
+      <p class="muted">Mümkün olan en kısa sürede dönüş yapmaya çalışıyoruz.</p>
+    </div>
+
+    <div class="card">
+      <h2>Sık Sorulan Sorular</h2>
+      <p><strong>Uygulamayı kullanmak için hesap açmam gerekiyor mu?</strong><br>
+      Hayır. "Misafir olarak başla" seçeneğiyle kayıt olmadan rota planlayabilir, adres ekleyebilir ve trafik bilgili en kısa rotayı hesaplayabilirsiniz.</p>
+      <p><strong>Verilerim nerede saklanıyor?</strong><br>
+      Misafir modunda oluşturduğunuz rota/adres verileri yalnızca kendi cihazınızda saklanır. Detaylar için <a href="privacy.html">Gizlilik Politikası</a> sayfamıza bakabilirsiniz.</p>
+    </div>
+
+    <footer>
+      &copy; <span id="year"></span> Rota360. Tüm hakları saklıdır. ·
+      <a href="privacy.html">Gizlilik Politikası</a>
+    </footer>
+  </div>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>
