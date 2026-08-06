@@ -283,13 +283,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                 ),
-
-                const SizedBox(height: 16),
-                const Text(
-                  'Tekirdağ Şehir Hastanesi\nPalyatif Bakım Birimi',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white38, fontSize: 12),
-                ),
               ],
             ),
           ),

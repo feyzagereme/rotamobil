@@ -104,17 +104,6 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
-              const SizedBox(height: 16),
-
-              Center(
-                child: Text(
-                  'Tekirdağ Şehir Hastanesi · Palyatif Bakım',
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.white.withValues(alpha: 0.25)),
-                ),
-              ),
             ],
           ),
         ),

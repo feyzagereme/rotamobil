@@ -148,7 +148,7 @@ class _SplashScreenState extends State<SplashScreen>
                         Transform.translate(
                           offset: Offset(0, _slideAnim.value),
                           child: Text(
-                            'Tekirdağ Şehir Hastanesi',
+                            'Trafik Bilgili Rota Planlama',
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.6),
                               fontSize: 14,
@@ -185,15 +185,6 @@ class _SplashScreenState extends State<SplashScreen>
                           valueColor: AlwaysStoppedAnimation(
                             Colors.white.withValues(alpha: 0.5),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Palyatif Bakım Birimi',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.35),
-                          fontSize: 12,
-                          letterSpacing: 0.5,
                         ),
                       ),
                     ],
