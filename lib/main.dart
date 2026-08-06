@@ -63,7 +63,7 @@ class RotaMobilApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Rota Mobil',
+      title: 'Rota360',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primaryColor: AppColors.primaryDark,

@@ -81,19 +81,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   width: 80,
                   height: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.route,
-                    size: 44,
-                    color: Colors.white,
+                    image: DecorationImage(
+                      image: AssetImage('assets/icon/app_icon.png'),
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
                 const Text(
-                  'Rota Mobil',
+                  'Rota360',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 28,

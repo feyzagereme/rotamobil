@@ -134,7 +134,7 @@ class _SplashScreenState extends State<SplashScreen>
                         Transform.translate(
                           offset: Offset(0, _slideAnim.value),
                           child: const Text(
-                            'Rota Mobil',
+                            'Rota360',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 32,

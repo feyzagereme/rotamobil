@@ -31,7 +31,7 @@ class WelcomeScreen extends StatelessWidget {
 
               // Başlık
               const Text(
-                'Rota Mobil',
+                'Rota360',
                 style: TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.w800,
