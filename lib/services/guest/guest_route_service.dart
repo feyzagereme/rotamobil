@@ -67,6 +67,7 @@ class GuestRouteService {
   static const _addressesKey = 'guest_addresses';
   static const _savedRoutesKey = 'guest_saved_routes';
   static const _favoritesKey = 'guest_favorites';
+  static const _lastRouteStatsKey = 'guest_last_route_stats';
 
   // Haversine mesafe hesabı
   static double distanceKm(double lat1, double lon1, double lat2, double lon2) {
@@ -132,6 +133,39 @@ class GuestRouteService {
   static Future<void> clearAddresses() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_addressesKey);
+  }
+
+  // Son hesaplanan gerçek rota mesafesi/süresi (TomTom veya haversine).
+  // Hangi adres listesine ait olduğu bir "imza" ile saklanır; adres
+  // listesi değişirse (ekleme/silme/sıra) imza uyuşmaz ve çağıran taraf
+  // otomatik olarak canlı tahmine geri döner.
+  static String _signature(List<GuestAddress> addresses) =>
+      addresses.map((a) => a.id).join(',');
+
+  static Future<void> saveRouteStats({
+    required double totalKm,
+    required int totalMinutes,
+    required List<GuestAddress> addresses,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastRouteStatsKey, jsonEncode({
+      'totalKm': totalKm,
+      'totalMinutes': totalMinutes,
+      'signature': _signature(addresses),
+    }));
+  }
+
+  static Future<({double totalKm, int totalMinutes})?> loadRouteStatsIfValid(
+      List<GuestAddress> addresses) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_lastRouteStatsKey);
+    if (raw == null) return null;
+    final data = jsonDecode(raw) as Map<String, dynamic>;
+    if (data['signature'] != _signature(addresses)) return null;
+    return (
+      totalKm: (data['totalKm'] as num).toDouble(),
+      totalMinutes: data['totalMinutes'] as int,
+    );
   }
 
   // Geçmiş rotalar

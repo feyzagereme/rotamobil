@@ -60,6 +60,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
     }
 
     if (!mounted) return;
+    final resolvedMinutes = minutes ?? (km / 40 * 60).round();
     setState(() {
       _sortedAddresses = sorted;
       _totalKm = km;
@@ -68,7 +69,12 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
       _routeCalculated = true;
       _isCalculating = false;
     });
-    GuestRouteService.saveAddresses(sorted);
+    await GuestRouteService.saveAddresses(sorted);
+    await GuestRouteService.saveRouteStats(
+      totalKm: km,
+      totalMinutes: resolvedMinutes,
+      addresses: sorted,
+    );
   }
 
   Future<void> _saveRoute() async {

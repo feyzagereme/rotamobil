@@ -20,6 +20,8 @@ class _GuestMapScreenState extends State<GuestMapScreen> {
   String? _pendingText;
   bool _isGeocoding = false;
   int? _selectedIndex;
+  double? _realTotalKm;
+  int? _realTotalMinutes;
 
   @override
   void initState() {
@@ -30,7 +32,12 @@ class _GuestMapScreenState extends State<GuestMapScreen> {
 
   Future<void> _load() async {
     final addresses = await GuestRouteService.loadAddresses();
-    setState(() => _addresses = addresses);
+    final stats = await GuestRouteService.loadRouteStatsIfValid(addresses);
+    setState(() {
+      _addresses = addresses;
+      _realTotalKm = stats?.totalKm;
+      _realTotalMinutes = stats?.totalMinutes;
+    });
   }
 
   Future<void> _onMapTap(TapPosition _, LatLng latlng) async {
@@ -322,14 +329,14 @@ class _GuestMapScreenState extends State<GuestMapScreen> {
                               color: Colors.white.withValues(alpha: 0.15)),
                           _bottomStat(
                               _addresses.isNotEmpty
-                                  ? '${GuestRouteService.totalDistance(_addresses, 40.98, 27.52).toStringAsFixed(1)} km'
+                                  ? '${(_realTotalKm ?? GuestRouteService.totalDistance(_addresses, 40.98, 27.52)).toStringAsFixed(1)} km'
                                   : '—',
                               'Mesafe'),
                           Container(width: 1, height: 32,
                               color: Colors.white.withValues(alpha: 0.15)),
                           _bottomStat(
                               _addresses.isNotEmpty
-                                  ? '~${(GuestRouteService.totalDistance(_addresses, 40.98, 27.52) / 40 * 60).toInt()} dk'
+                                  ? '~${_realTotalMinutes ?? (GuestRouteService.totalDistance(_addresses, 40.98, 27.52) / 40 * 60).toInt()} dk'
                                   : '—',
                               'Süre'),
                         ],
