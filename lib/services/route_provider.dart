@@ -19,6 +19,7 @@ class RouteProvider extends ChangeNotifier {
   List<Address> _addresses = [];
   String? _activeRouteId;
   String? _activeRouteName;
+  String _routeStatus = 'active';
   bool _isLoading = false;
   String? _errorMessage;
   Timer? _syncTimer;
@@ -64,6 +65,9 @@ class RouteProvider extends ChangeNotifier {
   int get completedStops => _addresses.where((a) => a.isCompleted).length;
   double get completionPercentage =>
       _addresses.isEmpty ? 0 : (completedStops / totalStops) * 100;
+  bool get isRouteCompleted => _routeStatus == 'completed';
+  bool get allStopsCompleted =>
+      _addresses.isNotEmpty && completedStops == totalStops;
 
   void _applyRouteData(Map<String, dynamic> decoded) {
     final routeJson = _asMap(decoded['route_json']);
@@ -72,7 +76,8 @@ class RouteProvider extends ChangeNotifier {
 
     _activeRouteId = decoded['id']?.toString();
     _activeRouteName = decoded['name']?.toString();
-    _addresses =
+    _routeStatus = decoded['status']?.toString() ?? 'active';
+    var parsedAddresses =
         stops
             .whereType<Map>()
             .map((item) => item.cast<String, dynamic>())
@@ -90,6 +95,28 @@ class RouteProvider extends ChangeNotifier {
             )
             .toList()
           ..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
+
+    // Rota, "ev -> duraklar -> ev" şeklinde kapalı bir döngü olarak
+    // oluşturuluyor (bkz. backend /routes/optimize). Yani ilk ve son
+    // durak aynı ev/başlangıç konumu — bunlar gerçek teslimat durağı
+    // değil, sürücünün "tamamlandı" işaretlemesi gereken bir şey değil.
+    // Koordinatları eşleşiyorsa (aynı nokta), ikisini de listeden çıkar.
+    if (parsedAddresses.length > 2) {
+      final first = parsedAddresses.first;
+      final last = parsedAddresses.last;
+      const epsilon = 0.0001; // ~11 metre tolerans
+      final isClosedLoop =
+          (first.latitude - last.latitude).abs() < epsilon &&
+          (first.longitude - last.longitude).abs() < epsilon;
+      if (isClosedLoop) {
+        parsedAddresses = parsedAddresses.sublist(
+          1,
+          parsedAddresses.length - 1,
+        );
+      }
+    }
+
+    _addresses = parsedAddresses;
   }
 
   Future<void> loadActiveRoute() async {
@@ -248,6 +275,37 @@ class RouteProvider extends ChangeNotifier {
       _addresses[index] = current;
       _errorMessage = 'Tamamlandı bilgisi gönderilemedi: $e';
       notifyListeners();
+    }
+  }
+
+  /// Sürücü, günün rotasını (tüm gerçek durakları tamamlayıp hastaneye
+  /// dönünce) bitirdiğinde çağrılır. Durak tamamlamadan ayrı bir kavram —
+  /// rotanın kendisini "completed" yapar.
+  Future<bool> completeRoute() async {
+    if (_activeRouteId == null) return false;
+
+    final previousStatus = _routeStatus;
+    _routeStatus = 'completed';
+    notifyListeners();
+
+    try {
+      final response = await http.patch(
+        Uri.parse('$_baseUrl/routes/$_activeRouteId/complete'),
+        headers: await AuthService.authHeaders(),
+      );
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        _routeStatus = previousStatus;
+        _errorMessage = 'Rota tamamlanamadı: ${response.statusCode}';
+        notifyListeners();
+        return false;
+      }
+      return true;
+    } catch (e) {
+      _routeStatus = previousStatus;
+      _errorMessage = 'Rota tamamlanamadı: $e';
+      notifyListeners();
+      return false;
     }
   }
 

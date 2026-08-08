@@ -1,7 +1,7 @@
 class AppConfig {
   static const String backendBaseUrl = String.fromEnvironment(
     'BACKEND_BASE_URL',
-    defaultValue: 'http://100.118.211.75:3000',
+    defaultValue: 'https://route-backend-1.onrender.com',
   );
 
   /// TomTom Routing API anahtarı (misafir modunda trafik bilgili rota için).

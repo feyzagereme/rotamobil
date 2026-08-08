@@ -257,7 +257,7 @@ class _RouteListScreenState extends State<RouteListScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 sliver: SliverReorderableList(
                   itemCount: addresses.length,
-                  onReorderItem: _onReorder,
+                  onReorder: _onReorder,
                   itemBuilder: (context, index) {
                     final address = addresses[index];
                     return ReorderableDragStartListener(
@@ -284,6 +284,33 @@ class _RouteListScreenState extends State<RouteListScreen> {
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ],
           ),
+          floatingActionButton: provider.allStopsCompleted
+              ? (provider.isRouteCompleted
+                  ? FloatingActionButton.extended(
+                      onPressed: null,
+                      backgroundColor: AppColors.stroke,
+                      icon: const Icon(Icons.check_circle_rounded),
+                      label: const Text('Rota Tamamlandı'),
+                    )
+                  : FloatingActionButton.extended(
+                      onPressed: () async {
+                        final ok = await context.read<RouteProvider>().completeRoute();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              ok
+                                  ? 'Rota tamamlandı, iyi günler!'
+                                  : 'Rota tamamlanamadı, tekrar deneyin.',
+                            ),
+                          ),
+                        );
+                      },
+                      backgroundColor: AppColors.primary,
+                      icon: const Icon(Icons.flag_rounded),
+                      label: const Text('Rotayı Tamamla'),
+                    ))
+              : null,
         );
       },
     );

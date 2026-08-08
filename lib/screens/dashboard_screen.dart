@@ -280,7 +280,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               // ── Sürüklenebilir rota listesi
               SliverReorderableList(
                 itemCount: addresses.length,
-                onReorderItem: provider.reorder,
+                onReorder: provider.reorder,
                 itemBuilder: (ctx, index) {
                   final address = addresses[index];
                   return Material(
