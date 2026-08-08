@@ -260,6 +260,16 @@ class _RouteListScreenState extends State<RouteListScreen> {
                   onReorder: _onReorder,
                   itemBuilder: (context, index) {
                     final address = addresses[index];
+                    if (address.isStartPoint) {
+                      return Container(
+                        key: ValueKey(address.id),
+                        child: _AddressItem(
+                          address: address,
+                          index: index,
+                          onDelete: () {},
+                        ),
+                      );
+                    }
                     return ReorderableDragStartListener(
                       key: ValueKey(address.id),
                       index: index,
@@ -273,7 +283,9 @@ class _RouteListScreenState extends State<RouteListScreen> {
                         child: _AddressItem(
                           address: address,
                           index: index,
-                          onDelete: () => context.read<RouteProvider>().removeAddress(index),
+                          onDelete: address.isReturnToBase
+                              ? () {}
+                              : () => context.read<RouteProvider>().removeAddress(index),
                         ),
                       ),
                     );
@@ -328,6 +340,40 @@ class _AddressItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCompleted = address.isCompleted;
 
+    if (address.isStartPoint) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.success.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.local_hospital_rounded, size: 20, color: AppColors.success),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Başlangıç',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.success),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(address.street,
+                      style: const TextStyle(fontSize: 11.5, color: AppColors.textMid),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+            const Icon(Icons.check_circle_rounded, size: 18, color: AppColors.success),
+          ],
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
@@ -377,13 +423,25 @@ class _AddressItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    address.customerName,
-                    style: TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w700,
-                      color: isCompleted ? AppColors.textLight : AppColors.textDark,
-                      decoration: isCompleted ? TextDecoration.lineThrough : null,
-                    ),
+                  Row(
+                    children: [
+                      if (address.isReturnToBase) ...[
+                        Icon(Icons.local_hospital_rounded,
+                            size: 14,
+                            color: isCompleted ? AppColors.textLight : AppColors.primaryDark),
+                        const SizedBox(width: 4),
+                      ],
+                      Expanded(
+                        child: Text(
+                          address.isReturnToBase ? 'Hastaneye Dönüş' : address.customerName,
+                          style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w700,
+                            color: isCompleted ? AppColors.textLight : AppColors.textDark,
+                            decoration: isCompleted ? TextDecoration.lineThrough : null,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 3),
                   Text(address.street,
@@ -396,7 +454,8 @@ class _AddressItem extends StatelessWidget {
               ),
             ),
           ),
-          IconButton(
+          if (!address.isReturnToBase)
+            IconButton(
             onPressed: () {
               showDialog(
                 context: context,

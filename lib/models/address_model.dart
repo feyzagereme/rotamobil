@@ -13,6 +13,16 @@ class Address {
   final bool isCompleted;
   final String? notes;
 
+  /// Bu durak, sürücünün rotaya başladığı hastane/başlangıç noktasıysa
+  /// true. Sürücü zaten orada olduğu için otomatik tamamlanmış sayılır,
+  /// elle işaretlenmesi gerekmez.
+  final bool isStartPoint;
+
+  /// Bu durak, sürücünün son duraktan sonra döneceği hastane noktasıysa
+  /// true. Diğer duraklar gibi elle "tamamlandı" işaretlenir, sadece
+  /// görünümü (etiket/ikon) farklıdır.
+  final bool isReturnToBase;
+
   Address({
     required this.id,
     required this.orderNumber,
@@ -27,6 +37,8 @@ class Address {
     required this.customerType,
     this.isCompleted = false,
     this.notes,
+    this.isStartPoint = false,
+    this.isReturnToBase = false,
   });
 
   String get fullAddress => '$street, $district, $city, $postalCode, $country';
@@ -86,7 +98,12 @@ class Address {
     };
   }
 
-  Address copyWith({bool? isCompleted, int? orderNumber}) {
+  Address copyWith({
+    bool? isCompleted,
+    int? orderNumber,
+    bool? isStartPoint,
+    bool? isReturnToBase,
+  }) {
     return Address(
       id: id,
       orderNumber: orderNumber ?? this.orderNumber,
@@ -101,6 +118,8 @@ class Address {
       customerType: customerType,
       isCompleted: isCompleted ?? this.isCompleted,
       notes: notes,
+      isStartPoint: isStartPoint ?? this.isStartPoint,
+      isReturnToBase: isReturnToBase ?? this.isReturnToBase,
     );
   }
 

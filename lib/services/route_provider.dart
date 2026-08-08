@@ -97,10 +97,10 @@ class RouteProvider extends ChangeNotifier {
           ..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
 
     // Rota, "ev -> duraklar -> ev" şeklinde kapalı bir döngü olarak
-    // oluşturuluyor (bkz. backend /routes/optimize). Yani ilk ve son
-    // durak aynı ev/başlangıç konumu — bunlar gerçek teslimat durağı
-    // değil, sürücünün "tamamlandı" işaretlemesi gereken bir şey değil.
-    // Koordinatları eşleşiyorsa (aynı nokta), ikisini de listeden çıkar.
+    // oluşturuluyor (bkz. backend /routes/optimize). İlk durak
+    // (başlangıç/hastane) otomatik tamamlanmış sayılır — sürücü zaten
+    // orada. Son durak (hastaneye dönüş) diğer duraklar gibi elle
+    // tamamlanır, sadece görünümü farklıdır. İkisi de sayaca dahildir.
     if (parsedAddresses.length > 2) {
       final first = parsedAddresses.first;
       final last = parsedAddresses.last;
@@ -109,10 +109,12 @@ class RouteProvider extends ChangeNotifier {
           (first.latitude - last.latitude).abs() < epsilon &&
           (first.longitude - last.longitude).abs() < epsilon;
       if (isClosedLoop) {
-        parsedAddresses = parsedAddresses.sublist(
-          1,
-          parsedAddresses.length - 1,
-        );
+        final middle = parsedAddresses.sublist(1, parsedAddresses.length - 1);
+        parsedAddresses = [
+          first.copyWith(isStartPoint: true, isCompleted: true),
+          ...middle,
+          last.copyWith(isReturnToBase: true),
+        ];
       }
     }
 
