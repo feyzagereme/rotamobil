@@ -2,8 +2,6 @@
 
 **Son güncelleme tarihi:** 9 Ağustos 2026
 
-> ⚠️ **Önemli not:** Bu metin, App Store / Play Store başvurusu için makul bir başlangıç taslağı olarak hazırlanmıştır. Sağlık kurumu bağlamında çalıştığı ve sürücü konum takibi içerdiği için, gerçek/canlı kullanıma geçmeden önce bir avukat veya KVKK danışmanı tarafından gözden geçirilmesi önerilir. Köşeli parantez içindeki `[...]` alanlar mutlaka doldurulmalıdır.
-
 ---
 
 ## 1. Veri Sorumlusu
