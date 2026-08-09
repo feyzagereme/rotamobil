@@ -1,6 +1,6 @@
 # Rota360 Mobil Uygulaması — Gizlilik Politikası ve KVKK Aydınlatma Metni
 
-**Son güncelleme tarihi:** 6 Ağustos 2026
+**Son güncelleme tarihi:** 9 Ağustos 2026
 
 > ⚠️ **Önemli not:** Bu metin, App Store / Play Store başvurusu için makul bir başlangıç taslağı olarak hazırlanmıştır. Sağlık kurumu bağlamında çalıştığı ve sürücü konum takibi içerdiği için, gerçek/canlı kullanıma geçmeden önce bir avukat veya KVKK danışmanı tarafından gözden geçirilmesi önerilir. Köşeli parantez içindeki `[...]` alanlar mutlaka doldurulmalıdır.
 
@@ -33,11 +33,11 @@ Rota360, birden fazla durağı en kısa/en hızlı şekilde dolaşmak isteyen he
 
 | Kategori | Örnek Veri | Kaynağı |
 |---|---|---|
-| Kimlik ve hesap bilgileri | Kullanıcı adı, kullanıcı ID'si, atanmış araç bilgisi | Personel girişi (yalnızca kurumsal hesaplar) |
+| Kimlik ve hesap bilgileri | Kullanıcı adı, kullanıcı ID'si, atanmış araç bilgisi | Personel girişi (yalnızca kurumsal hesaplar); mobil uygulama için bulut tabanlı sunucu ve veritabanında (bkz. Bölüm 6) saklanır |
 | İşlem güvenliği bilgileri | Şifre (yalnızca şifrelenmiş/hash'lenmiş biçimde sunucuda tutulur, cihazda oturum belirteci — JWT token — saklanır) | Personel girişi |
 | Konum verisi | Anlık GPS konumu (yaklaşık her 3 dakikada bir sunucuya iletilir) | Cihaz konum servisleri — **yalnızca kurumsal hesapla giriş yapıldığında**, kullanıcı izniyle. Misafir modunda cihaz konumu hiç okunmaz. |
 | İletişim/bildirim verisi | Firebase Cloud Messaging cihaz belirteci (push bildirim token'ı) | Cihaz, bildirim izni verildiğinde |
-| Operasyonel/rota verisi | Ziyaret edilecek adresler, durak tamamlanma durumu, rota geçmişi | Kullanıcı girişi (misafir: yalnızca cihazda) veya kurumun planlama sistemi (personel: sunucu üzerinden) |
+| Operasyonel/rota verisi | Ziyaret edilecek adresler, durak tamamlanma durumu, rota geçmişi | Misafir modunda yalnızca cihazda; mobil uygulamada kurumun bulut tabanlı sunucu altyapısı üzerinden |
 
 > **Not:** Hasta adı, T.C. kimlik numarası, telefon numarası gibi hastaya ait kimliği belirleyici özel nitelikli veriler bu uygulamaya **aktarılmaz**; bu veriler kurumun kendi iç/lokal sisteminde kalır. Uygulamaya yalnızca adres ve kurum içi adres kodu (örn. "M001") ulaşır.
 
@@ -62,9 +62,11 @@ Misafir kullanıcılar için kişisel veri işlenmesi, uygulamanın temel işlev
 
 ## 6. Kişisel Verilerin Aktarılması
 
-- Kurumsal hesap verileri, herhangi bir bulut/üçüncü taraf hosting sağlayıcısına aktarılmaz; kurumun kendi bilgisayarında/ağında yerel olarak barındırılan bir veritabanı ve sunucuda saklanır.
+- **Mobil uygulama (kurumsal personel girişi):** Hesap, rota ve konum verileri, uygulamamızın çalıştırdığı bir sunucu üzerinden işlenir; bu sunucu Render (Render Services, Inc., ABD merkezli) bulut altyapısında barındırılır, veritabanı ise Neon (Neon, Inc., ABD merkezli) tarafından sağlanan bulut tabanlı bir PostgreSQL veritabanıdır. Bu nedenle kurumsal hesap verileri **yurt dışına aktarılmaktadır**. Sunucu ile uygulama arasındaki iletişim HTTPS ile şifrelenir.
+- **Web/masaüstü istemcisi (kurum içi kullanım):** Kurumun kendi bilgisayarında/ağında yerel bir arayüz olarak çalışır; şu an mobil uygulamayla aynı bulut sunucusuna bağlanmaktadır. Hastane içi tamamen yerel bir sunucu/veritabanı ve bulutla senkronizasyon mimarisi planlanmakta olup henüz devreye alınmamıştır; bu mimari tamamlandığında bu politika güncellenecektir.
 - Misafir modunda rota hesaplaması için durak koordinatları, kimlikle ilişkilendirilmeden TomTom (TomTom International B.V.) rota hesaplama servisine iletilir.
 - Push bildirimler için cihaz token'ı Google Firebase Cloud Messaging altyapısına iletilir (Google LLC, ABD merkezli — yurt dışı veri aktarımı kapsamında değerlendirilir).
+- Hata/performans izleme için teknik hata kayıtları Sentry (Functional Software, Inc., ABD merkezli) altyapısına iletilebilir.
 - Veriler, kanunen yetkili kamu kurum ve kuruluşları haricinde üçüncü taraflarla **pazarlama, reklam veya başka bir ticari amaçla paylaşılmaz, satılmaz.**
 
 ---

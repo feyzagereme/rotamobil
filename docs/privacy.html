@@ -55,7 +55,7 @@
       <div><strong>Rota360</strong></div>
     </div>
     <h1>Gizlilik Politikası ve KVKK Aydınlatma Metni</h1>
-    <p class="muted">Son güncelleme tarihi: 6 Ağustos 2026</p>
+    <p class="muted">Son güncelleme tarihi: 9 Ağustos 2026</p>
 
     <div class="warn">
       ⚠️ Bu metin, App Store / Play Store başvurusu için hazırlanmış bir başlangıç taslağıdır. Kırmızı ile işaretli <span class="placeholder">[...]</span> alanlar doldurulmadan ve gerçek kullanıma geçmeden önce bir avukat/KVKK danışmanı tarafından gözden geçirilmeden yayına alınmamalıdır.
@@ -79,11 +79,11 @@
     <h2>3. İşlenen Kişisel Veri Kategorileri</h2>
     <table>
       <tr><th>Kategori</th><th>Örnek Veri</th><th>Kaynağı</th></tr>
-      <tr><td>Kimlik ve hesap bilgileri</td><td>Kullanıcı adı, kullanıcı ID'si, atanmış araç bilgisi</td><td>Personel girişi (yalnızca kurumsal hesaplar)</td></tr>
+      <tr><td>Kimlik ve hesap bilgileri</td><td>Kullanıcı adı, kullanıcı ID'si, atanmış araç bilgisi</td><td>Personel girişi (yalnızca kurumsal hesaplar); mobil uygulama için bulut tabanlı sunucu ve veritabanında (bkz. Bölüm 6) saklanır</td></tr>
       <tr><td>İşlem güvenliği bilgileri</td><td>Şifre (sunucuda yalnızca hash'lenmiş biçimde), oturum belirteci (JWT)</td><td>Personel girişi</td></tr>
       <tr><td>Konum verisi</td><td>Anlık GPS konumu (yaklaşık her 3 dakikada bir)</td><td>Cihaz konum servisleri — <strong>yalnızca kurumsal hesapla giriş yapıldığında</strong>, kullanıcı izniyle. Misafir modunda cihaz konumu hiç okunmaz.</td></tr>
       <tr><td>İletişim/bildirim verisi</td><td>Firebase Cloud Messaging cihaz belirteci (push bildirim token'ı)</td><td>Cihaz, bildirim izni verildiğinde</td></tr>
-      <tr><td>Operasyonel/rota verisi</td><td>Ziyaret edilecek adresler, durak tamamlanma durumu, rota geçmişi</td><td>Kullanıcı girişi (misafir: yalnızca cihazda) veya kurumun planlama sistemi (personel: sunucu üzerinden)</td></tr>
+      <tr><td>Operasyonel/rota verisi</td><td>Ziyaret edilecek adresler, durak tamamlanma durumu, rota geçmişi</td><td>Misafir modunda yalnızca cihazda; mobil uygulamada kurumun bulut tabanlı sunucu altyapısı üzerinden</td></tr>
     </table>
     <p class="muted"><strong>Not:</strong> Hasta adı, T.C. kimlik numarası, telefon numarası gibi üçüncü kişilere ait kimliği belirleyici özel nitelikli veriler bu uygulamaya aktarılmaz.</p>
 
@@ -103,9 +103,11 @@
 
     <h2>6. Kişisel Verilerin Aktarılması</h2>
     <ul>
-      <li>Kurumsal hesap verileri, herhangi bir bulut/üçüncü taraf hosting sağlayıcısına aktarılmaz; kurumun kendi bilgisayarında/ağında yerel olarak barındırılan bir veritabanı ve sunucuda saklanır.</li>
+      <li><strong>Mobil uygulama (kurumsal personel girişi):</strong> Hesap, rota ve konum verileri, Render (Render Services, Inc., ABD merkezli) bulut altyapısında barındırılan bir sunucu üzerinden işlenir; veritabanı Neon (Neon, Inc., ABD merkezli) tarafından sağlanan bulut tabanlı bir PostgreSQL veritabanıdır. Bu nedenle kurumsal hesap verileri <strong>yurt dışına aktarılmaktadır</strong>. Sunucu ile uygulama arasındaki iletişim HTTPS ile şifrelenir.</li>
+      <li><strong>Web/masaüstü istemcisi (kurum içi kullanım):</strong> Kurumun kendi bilgisayarında/ağında yerel bir arayüz olarak çalışır; şu an mobil uygulamayla aynı bulut sunucusuna bağlanmaktadır. Hastane içi tamamen yerel bir sunucu/veritabanı ve bulutla senkronizasyon mimarisi planlanmakta olup henüz devreye alınmamıştır; bu mimari tamamlandığında bu politika güncellenecektir.</li>
       <li>Misafir modunda rota hesaplaması için durak koordinatları, kimlikle ilişkilendirilmeden TomTom (TomTom International B.V.) rota hesaplama servisine iletilir.</li>
       <li>Push bildirimler için cihaz token'ı Google Firebase Cloud Messaging altyapısına iletilir (Google LLC, ABD merkezli — yurt dışı veri aktarımı kapsamında değerlendirilir).</li>
+      <li>Hata/performans izleme için teknik hata kayıtları Sentry (Functional Software, Inc., ABD merkezli) altyapısına iletilebilir.</li>
       <li>Veriler, kanunen yetkili kamu kurum ve kuruluşları haricinde üçüncü taraflarla pazarlama, reklam veya başka bir ticari amaçla <strong>paylaşılmaz, satılmaz.</strong></li>
     </ul>
 
