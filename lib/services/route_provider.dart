@@ -256,7 +256,31 @@ class RouteProvider extends ChangeNotifier {
     if (newIndex > oldIndex) newIndex--;
     final item = _addresses.removeAt(oldIndex);
     _addresses.insert(newIndex, item);
+    // Yeni sıra numaralarını güncelle
+    for (int i = 0; i < _addresses.length; i++) {
+      _addresses[i] = _addresses[i].copyWith(orderNumber: i + 1);
+    }
     notifyListeners();
+    _persistStopOrder(); // Backend'e kaydet
+  }
+
+  /// Sürücünün değiştirdiği durak sırasını backend'e gönderir.
+  /// Ağ hatası olursa sessizce geçer — bir sonraki 10sn senkronizasyonda
+  /// backend'in sırası geri yüklenir, kullanıcıya hata gösterilmez.
+  Future<void> _persistStopOrder() async {
+    if (_activeRouteId == null || _addresses.isEmpty) return;
+    try {
+      final stops = _addresses
+          .map((a) => {'id': a.id, 'order': a.orderNumber})
+          .toList();
+      await http.patch(
+        Uri.parse('$_baseUrl/routes/$_activeRouteId/stops'),
+        headers: await AuthService.authHeaders(),
+        body: jsonEncode({'stops': stops}),
+      ).timeout(const Duration(seconds: 10));
+    } catch (_) {
+      // Ağ hatası — sessizce geç, sonraki sync düzeltir
+    }
   }
 
   void addAddress(Address address) {

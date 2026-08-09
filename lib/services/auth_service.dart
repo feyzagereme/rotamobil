@@ -76,6 +76,7 @@ class AuthService {
     await prefs.remove("user_id");
     await prefs.remove("auth_token");
     await prefs.remove("assigned_vehicle_id");
+    await prefs.remove("selected_vehicle_id"); // Paylaşımlı cihazda bir sonraki sürücüye sızmayı önler
   }
 
   /// Uygulama açılışında oturum açık mı kontrol eder.
