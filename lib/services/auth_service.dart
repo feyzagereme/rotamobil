@@ -74,6 +74,8 @@ class AuthService {
     await prefs.remove(_keyLoggedIn);
     await prefs.remove(_keyUsername);
     await prefs.remove("user_id");
+    await prefs.remove("auth_token");
+    await prefs.remove("assigned_vehicle_id");
   }
 
   /// Uygulama açılışında oturum açık mı kontrol eder.
