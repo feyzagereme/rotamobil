@@ -58,12 +58,35 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
     }
   }
 
-  void _toggleCompleted() {
+  Future<void> _toggleCompleted() async {
+    final target = !_isCompleted;
     HapticFeedback.mediumImpact();
-    setState(() => _isCompleted = !_isCompleted);
-    context.read<RouteProvider>().toggleCompleted(widget.index);
+    setState(() => _isCompleted = target);
 
-    if (!_isCompleted) {
+    // RouteProvider.toggleCompleted artık gerçekten kaydedilip
+    // kaydedilmediğini bool olarak dönüyor — önceden bu sonuç hiç
+    // kontrol edilmiyordu, backend'e kayıt sessizce başarısız olsa
+    // bile ekran her zaman "başarılı" gösteriyordu.
+    final success = await context.read<RouteProvider>().toggleCompleted(widget.index);
+    if (!mounted) return;
+
+    if (!success) {
+      setState(() => _isCompleted = !target);
+      final error = context.read<RouteProvider>().errorMessage;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error ?? 'Değişiklik kaydedilemedi, tekrar deneyin.'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(12),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    if (!target) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Ziyaret tamamlanmadı olarak işaretlendi'),

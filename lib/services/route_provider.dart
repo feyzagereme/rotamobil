@@ -269,15 +269,24 @@ class RouteProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> toggleCompleted(int index) async {
-    if (index < 0 || index >= _addresses.length) return;
+  // Backend'e gerçekten kaydedilip kaydedilmediğini çağıran tarafın
+  // bilebilmesi için bool dönüyor — önceden void dönüyordu ve
+  // AddressDetailScreen bu sonucu hiç kontrol etmeden ekranda her zaman
+  // "Tamamlandı" gösteriyordu, kayıt sessizce başarısız olsa bile.
+  Future<bool> toggleCompleted(int index) async {
+    if (index < 0 || index >= _addresses.length) return false;
 
     final current = _addresses[index];
     final updated = current.copyWith(isCompleted: !current.isCompleted);
     _addresses[index] = updated;
     notifyListeners();
 
-    if (_activeRouteId == null) return;
+    if (_activeRouteId == null) {
+      _addresses[index] = current;
+      _errorMessage = 'Aktif rota bulunamadı, tamamlanma bilgisi kaydedilemedi.';
+      notifyListeners();
+      return false;
+    }
 
     try {
       final response = await http.patch(
@@ -294,11 +303,14 @@ class RouteProvider extends ChangeNotifier {
         _errorMessage =
             'Tamamlandı bilgisi kaydedilemedi: ${response.statusCode}';
         notifyListeners();
+        return false;
       }
+      return true;
     } catch (e) {
       _addresses[index] = current;
       _errorMessage = 'Tamamlandı bilgisi gönderilemedi: $e';
       notifyListeners();
+      return false;
     }
   }
 
