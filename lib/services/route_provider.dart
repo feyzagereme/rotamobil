@@ -34,6 +34,19 @@ class RouteProvider extends ChangeNotifier {
   bool _isOptimizing = false;
   String? _optimizeError;
 
+  // Backend 401/403 döndüğünde (token süresi dolmuş ya da admin tarafından
+  // iptal edilmiş) true olur. UI katmanı bunu dinleyip kullanıcıyı login
+  // ekranına yönlendirmeli — aksi halde kullanıcı "giriş yapmış" görünüp
+  // aslında hiçbir isteği çalışmayan bir durumda takılı kalır.
+  bool _sessionExpired = false;
+  bool get sessionExpired => _sessionExpired;
+  void clearSessionExpired() => _sessionExpired = false;
+  void _flagIfSessionError(int statusCode) {
+    if (statusCode == 401 || statusCode == 403) {
+      _sessionExpired = true;
+    }
+  }
+
   RouteProvider() {
     loadActiveRoute();
     startAutoSync();
@@ -159,6 +172,7 @@ class RouteProvider extends ChangeNotifier {
       }
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        _flagIfSessionError(response.statusCode);
         throw Exception('Sunucu hatası: ${response.statusCode}');
       }
 
@@ -265,9 +279,10 @@ class RouteProvider extends ChangeNotifier {
         ),
         headers: await AuthService.authHeaders(),
         body: jsonEncode({'completed': updated.isCompleted}),
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        _flagIfSessionError(response.statusCode);
         _addresses[index] = current;
         _errorMessage =
             'Tamamlandı bilgisi kaydedilemedi: ${response.statusCode}';
@@ -297,9 +312,10 @@ class RouteProvider extends ChangeNotifier {
         ),
         headers: await AuthService.authHeaders(),
         body: jsonEncode({'note': note}),
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        _flagIfSessionError(response.statusCode);
         _addresses[index] = current;
         _errorMessage = 'Not kaydedilemedi: ${response.statusCode}';
         notifyListeners();
@@ -325,9 +341,10 @@ class RouteProvider extends ChangeNotifier {
       final response = await http.patch(
         Uri.parse('$_baseUrl/routes/$_activeRouteId/complete'),
         headers: await AuthService.authHeaders(),
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        _flagIfSessionError(response.statusCode);
         _routeStatus = previousStatus;
         _errorMessage = 'Rota tamamlanamadı: ${response.statusCode}';
         notifyListeners();
@@ -398,9 +415,10 @@ class RouteProvider extends ChangeNotifier {
                   })
               .toList(),
         }),
-      );
+      ).timeout(const Duration(seconds: 20));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        _flagIfSessionError(response.statusCode);
         _optimizeError = 'Rota optimize edilemedi: ${response.statusCode}';
         return false;
       }
