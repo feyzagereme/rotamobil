@@ -99,7 +99,7 @@ class WelcomeScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(16)),
                   ),
                   child: const Text(
-                    'Hastane Personeli Girişi',
+                    'Personel Girişi',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                 ),
