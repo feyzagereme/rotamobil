@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class GuestAddress {
@@ -38,6 +39,9 @@ class SavedRoute {
   final DateTime date;
   final List<GuestAddress> addresses;
   final double totalKm;
+  // Kaydedilirken TomTom'dan gerçek yol geometrisi alınabildiyse burada
+  // saklanır; null ise detay ekranı duraklar arasına düz çizgi çizer.
+  final List<LatLng>? geometry;
 
   SavedRoute({
     required this.id,
@@ -45,6 +49,7 @@ class SavedRoute {
     required this.date,
     required this.addresses,
     required this.totalKm,
+    this.geometry,
   });
 
   Map<String, dynamic> toJson() => {
@@ -52,6 +57,7 @@ class SavedRoute {
     'date': date.toIso8601String(),
     'addresses': addresses.map((a) => a.toJson()).toList(),
     'totalKm': totalKm,
+    if (geometry != null) 'geometry': geometry!.map((p) => [p.latitude, p.longitude]).toList(),
   };
 
   factory SavedRoute.fromJson(Map<String, dynamic> json) => SavedRoute(
@@ -60,6 +66,9 @@ class SavedRoute {
     addresses: (json['addresses'] as List)
         .map((a) => GuestAddress.fromJson(a)).toList(),
     totalKm: json['totalKm']?.toDouble() ?? 0,
+    geometry: (json['geometry'] as List?)
+        ?.map((p) => LatLng((p[0] as num).toDouble(), (p[1] as num).toDouble()))
+        .toList(),
   );
 }
 
@@ -146,25 +155,31 @@ class GuestRouteService {
     required double totalKm,
     required int totalMinutes,
     required List<GuestAddress> addresses,
+    List<LatLng>? geometry,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_lastRouteStatsKey, jsonEncode({
       'totalKm': totalKm,
       'totalMinutes': totalMinutes,
       'signature': _signature(addresses),
+      if (geometry != null) 'geometry': geometry.map((p) => [p.latitude, p.longitude]).toList(),
     }));
   }
 
-  static Future<({double totalKm, int totalMinutes})?> loadRouteStatsIfValid(
+  static Future<({double totalKm, int totalMinutes, List<LatLng>? geometry})?> loadRouteStatsIfValid(
       List<GuestAddress> addresses) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_lastRouteStatsKey);
     if (raw == null) return null;
     final data = jsonDecode(raw) as Map<String, dynamic>;
     if (data['signature'] != _signature(addresses)) return null;
+    final geometryRaw = data['geometry'] as List?;
     return (
       totalKm: (data['totalKm'] as num).toDouble(),
       totalMinutes: data['totalMinutes'] as int,
+      geometry: geometryRaw
+          ?.map((p) => LatLng((p[0] as num).toDouble(), (p[1] as num).toDouble()))
+          .toList(),
     );
   }
 

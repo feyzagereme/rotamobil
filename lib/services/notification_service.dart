@@ -10,6 +10,29 @@ import 'package:http/http.dart' as http;
 /// - Giriş yapmış kullanıcı varsa token'ı backend'e gönderir
 /// - Token yenilenirse (nadiren olur) otomatik günceller
 class NotificationService {
+  static const _enabledKey = 'notifications_enabled';
+
+  static Future<bool> isEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_enabledKey) ?? true;
+  }
+
+  /// Profil ekranındaki "Bildirimler" anahtarından çağrılır. Kapatılınca
+  /// backend'deki fcm_token null'lanır (push artık gönderilmez); tekrar
+  /// açılınca cihazda zaten alınmış token varsa hemen yeniden gönderilir.
+  static Future<void> setEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_enabledKey, enabled);
+    final userId = prefs.getInt('user_id');
+    if (userId == null) return;
+    if (enabled) {
+      final token = prefs.getString('fcm_token');
+      if (token != null) await sendTokenToBackend(userId, token);
+    } else {
+      await sendTokenToBackend(userId, null);
+    }
+  }
+
   static Future<void> initialize() async {
     final messaging = FirebaseMessaging.instance;
 
@@ -35,13 +58,16 @@ class NotificationService {
 
     final userId = prefs.getInt('user_id');
     if (userId == null) return; // henüz giriş yapılmamış, login sonrası gönderilecek
+    if (!(await isEnabled())) return; // kullanıcı bildirimleri kapatmış
 
     await sendTokenToBackend(userId, token);
   }
 
   /// Login başarılı olduktan hemen sonra da çağrılır (kullanıcı ID'si o an
-  /// belli olduğu için token'ı hemen backend'e eşleştirebiliriz).
-  static Future<void> sendTokenToBackend(int userId, String token) async {
+  /// belli olduğu için token'ı hemen backend'e eşleştirebiliriz). token
+  /// null verilirse backend'deki kayıtlı token temizlenir (bildirimleri
+  /// kapatma akışında kullanılır).
+  static Future<void> sendTokenToBackend(int userId, String? token) async {
     try {
       await http.post(
         Uri.parse('${AuthService.baseUrl}/users/$userId/fcm-token'),
@@ -59,6 +85,7 @@ class NotificationService {
   /// backend'e gönderir (initialize() sırasında henüz giriş yapılmamış
   /// olabileceği için orada gönderilememiş olabilir).
   static Future<void> syncTokenAfterLogin(int userId) async {
+    if (!(await isEnabled())) return;
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('fcm_token');
     if (token != null) {

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:latlong2/latlong.dart';
 import '../../services/guest/guest_route_service.dart';
-import '../../services/guest/tomtom_routing_service.dart';
+import '../../services/tomtom_routing_service.dart';
 import 'guest_map_screen.dart';
 import 'guest_address_detail_screen.dart';
 
@@ -19,6 +20,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
   bool _usedTraffic = false;
   double _totalKm = 0;
   int? _totalMinutes;
+  List<LatLng>? _routeGeometry;
   final double _startLat = 40.9833;
   final double _startLon = 27.5167;
 
@@ -66,6 +68,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
       _totalKm = km;
       _totalMinutes = minutes;
       _usedTraffic = tomtomResult != null;
+      _routeGeometry = tomtomResult?.geometry;
       _routeCalculated = true;
       _isCalculating = false;
     });
@@ -74,6 +77,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
       totalKm: km,
       totalMinutes: resolvedMinutes,
       addresses: sorted,
+      geometry: tomtomResult?.geometry,
     );
   }
 
@@ -82,12 +86,18 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
     final now = DateTime.now();
     const months = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
     final name = '${now.day} ${months[now.month - 1]} rotası';
+    // "Rota Hesapla" basılmadan kaydedilirse _totalKm hâlâ varsayılan 0'dır;
+    // bu durumda en azından haversine tahminiyle gerçekçi bir mesafe göster.
+    final km = _routeCalculated
+        ? _totalKm
+        : GuestRouteService.totalDistance(_sortedAddresses, _startLat, _startLon);
     await GuestRouteService.saveRoute(SavedRoute(
       id: now.millisecondsSinceEpoch.toString(),
       name: name,
       date: now,
       addresses: List.from(_sortedAddresses),
-      totalKm: _totalKm,
+      totalKm: km,
+      geometry: _routeCalculated ? _routeGeometry : null,
     ));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -113,6 +123,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
       _sortedAddresses = [];
       _routeCalculated = false;
       _totalKm = 0;
+      _routeGeometry = null;
     });
   }
 

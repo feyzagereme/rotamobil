@@ -60,10 +60,12 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _guestLogin() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('user_id', 1);
-    if (mounted) Navigator.of(context).pushReplacementNamed('/home');
+  void _guestLogin() {
+    // Gerçek, izole misafir akışına yönlendir (bkz. welcome_screen.dart) —
+    // sahte bir üye oturumu (user_id=1, token'sız) açıp /home'a (üye paneli)
+    // sokmak yerine, hiçbir backend hesabıyla ilişkilendirilmeyen GuestApp'e
+    // gidiyoruz.
+    Navigator.of(context).pushReplacementNamed('/guest');
   }
 
   @override

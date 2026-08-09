@@ -8,9 +8,33 @@ import '../config/app_config.dart';
 
 class LocationService {
   static const _baseUrl = AppConfig.backendBaseUrl;
+  static const _enabledKey = 'gps_tracking_enabled';
   static Timer? _timer;
   static bool _isRunning = false;
   static bool _lastSendFailed = false;
+
+  static Future<bool> isEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_enabledKey) ?? true;
+  }
+
+  /// Profil ekranındaki "GPS Konum Takibi" anahtarından çağrılır — tercihi
+  /// kalıcı olarak saklar ve takibi anında başlatır/durdurur.
+  static Future<void> setEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_enabledKey, enabled);
+    if (enabled) {
+      startTracking();
+    } else {
+      stopTracking();
+    }
+  }
+
+  /// Uygulama açılışında çağrılır — kullanıcı daha önce takibi kapatmışsa
+  /// hiçbir şey yapmaz.
+  static Future<void> startTrackingIfEnabled() async {
+    if (await isEnabled()) startTracking();
+  }
 
   // Konum izni kontrolü
   static Future<bool> requestPermission() async {

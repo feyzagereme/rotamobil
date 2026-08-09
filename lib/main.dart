@@ -134,7 +134,7 @@ class _MainAppState extends State<MainApp> {
   @override
   void initState() {
     super.initState();
-    LocationService.startTracking();
+    LocationService.startTrackingIfEnabled();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<VehicleProvider>().addListener(_handleVehicleChange);

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/location_service.dart';
+import '../services/notification_service.dart';
 import '../services/route_provider.dart';
 import '../theme/app_colors.dart';
 
@@ -14,18 +16,29 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool notificationsEnabled = true;
   bool gpsEnabled = true;
-  bool voiceGuidanceEnabled = true;
   String _username = '';
 
   @override
   void initState() {
     super.initState();
     _loadUsername();
+    _loadSettings();
   }
 
   Future<void> _loadUsername() async {
     final username = await AuthService.getUsername();
     if (mounted) setState(() => _username = username.isNotEmpty ? username : 'Misafir');
+  }
+
+  Future<void> _loadSettings() async {
+    final notif = await NotificationService.isEnabled();
+    final gps = await LocationService.isEnabled();
+    if (mounted) {
+      setState(() {
+        notificationsEnabled = notif;
+        gpsEnabled = gps;
+      });
+    }
   }
 
   Future<void> _logout() async {
@@ -211,13 +224,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 10),
                     _card([
                       _toggleRow(Icons.notifications_rounded, 'Bildirimler',
-                          notificationsEnabled, (v) => setState(() => notificationsEnabled = v)),
+                          notificationsEnabled, (v) {
+                        setState(() => notificationsEnabled = v);
+                        NotificationService.setEnabled(v);
+                      }),
                       _divider(),
                       _toggleRow(Icons.gps_fixed_rounded, 'GPS Konum Takibi',
-                          gpsEnabled, (v) => setState(() => gpsEnabled = v)),
-                      _divider(),
-                      _toggleRow(Icons.record_voice_over_rounded, 'Sesli Rehber',
-                          voiceGuidanceEnabled, (v) => setState(() => voiceGuidanceEnabled = v)),
+                          gpsEnabled, (v) {
+                        setState(() => gpsEnabled = v);
+                        LocationService.setEnabled(v);
+                      }),
                     ]),
 
                     const SizedBox(height: 20),

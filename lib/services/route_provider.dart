@@ -280,6 +280,37 @@ class RouteProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateNote(int index, String note) async {
+    if (index < 0 || index >= _addresses.length) return;
+
+    final current = _addresses[index];
+    final updated = current.copyWith(notes: note);
+    _addresses[index] = updated;
+    notifyListeners();
+
+    if (_activeRouteId == null) return;
+
+    try {
+      final response = await http.patch(
+        Uri.parse(
+          '$_baseUrl/routes/$_activeRouteId/stops/${updated.id}/note',
+        ),
+        headers: await AuthService.authHeaders(),
+        body: jsonEncode({'note': note}),
+      );
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        _addresses[index] = current;
+        _errorMessage = 'Not kaydedilemedi: ${response.statusCode}';
+        notifyListeners();
+      }
+    } catch (e) {
+      _addresses[index] = current;
+      _errorMessage = 'Not gönderilemedi: $e';
+      notifyListeners();
+    }
+  }
+
   /// Sürücü, günün rotasını (tüm gerçek durakları tamamlayıp hastaneye
   /// dönünce) bitirdiğinde çağrılır. Durak tamamlamadan ayrı bir kavram —
   /// rotanın kendisini "completed" yapar.

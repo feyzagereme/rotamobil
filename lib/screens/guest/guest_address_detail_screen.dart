@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/guest/guest_route_service.dart';
 
@@ -52,6 +53,14 @@ class _GuestAddressDetailScreenState extends State<GuestAddressDetailScreen> {
       '&destination=${widget.address.latitude},${widget.address.longitude}&travelmode=driving',
     );
     if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _shareAddress() async {
+    final mapsUrl = 'https://www.google.com/maps/search/?api=1'
+        '&query=${widget.address.latitude},${widget.address.longitude}';
+    await SharePlus.instance.share(ShareParams(
+      text: '${widget.address.name}\n${widget.address.fullAddress}\n$mapsUrl',
+    ));
   }
 
   @override
@@ -261,7 +270,7 @@ class _GuestAddressDetailScreenState extends State<GuestAddressDetailScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _actionBtn(Icons.share_rounded, 'Paylaş',
-                          const Color(0xFF5A6A85), () {}),
+                          const Color(0xFF5A6A85), _shareAddress),
                     ),
                     const SizedBox(width: 10),
                     Expanded(

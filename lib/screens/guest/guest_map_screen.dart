@@ -22,12 +22,75 @@ class _GuestMapScreenState extends State<GuestMapScreen> {
   int? _selectedIndex;
   double? _realTotalKm;
   int? _realTotalMinutes;
+  List<LatLng>? _routeGeometry;
+
+  bool _showSearch = false;
+  final _searchController = TextEditingController();
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // Nominatim usage policy metin başına en fazla 1 istek istiyor — bu yüzden
+  // her tuş vuruşunda değil, sadece kullanıcı arama yapmayı onayladığında
+  // (Enter / arama ikonu) çağrılır, yazarken otomatik tetiklenmez.
+  Future<void> _searchAddress(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return;
+    setState(() { _isSearching = true; _searchResults = []; });
+    try {
+      final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
+        'q': trimmed,
+        'format': 'json',
+        'addressdetails': '1',
+        'limit': '6',
+        'countrycodes': 'tr',
+        'accept-language': 'tr',
+      });
+      final res = await http.get(uri, headers: {'User-Agent': 'RotaMobil/1.0'});
+      if (res.statusCode == 200) {
+        final results = (jsonDecode(res.body) as List).cast<Map<String, dynamic>>();
+        if (mounted) setState(() { _searchResults = results; _isSearching = false; });
+      } else if (mounted) {
+        setState(() => _isSearching = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isSearching = false);
+    }
+  }
+
+  void _selectSearchResult(Map<String, dynamic> result) {
+    final lat = double.tryParse(result['lat']?.toString() ?? '');
+    final lon = double.tryParse(result['lon']?.toString() ?? '');
+    if (lat == null || lon == null) return;
+    final addr = result['address'] as Map<String, dynamic>? ?? {};
+    final road = (addr['road'] ?? addr['pedestrian'] ?? addr['suburb'] ?? '').toString();
+    final district = (addr['suburb'] ?? addr['district'] ?? addr['town'] ?? '').toString();
+    final short = road.isNotEmpty
+        ? '$road${district.isNotEmpty ? ', $district' : ''}'
+        : (result['display_name'] as String? ?? '').split(',').take(2).join(',');
+    final point = LatLng(lat, lon);
+    setState(() {
+      _selectedIndex = null;
+      _pendingPin = point;
+      _pendingText = short.isNotEmpty ? short : null;
+      _isGeocoding = false;
+      _showSearch = false;
+      _searchResults = [];
+      _searchController.clear();
+    });
+    _mapController.move(point, 16);
   }
 
   Future<void> _load() async {
@@ -37,6 +100,7 @@ class _GuestMapScreenState extends State<GuestMapScreen> {
       _addresses = addresses;
       _realTotalKm = stats?.totalKm;
       _realTotalMinutes = stats?.totalMinutes;
+      _routeGeometry = stats?.geometry;
     });
   }
 
@@ -140,7 +204,8 @@ class _GuestMapScreenState extends State<GuestMapScreen> {
               if (_addresses.length > 1)
                 PolylineLayer(polylines: [
                   Polyline(
-                    points: _addresses.map((a) => LatLng(a.latitude, a.longitude)).toList(),
+                    points: _routeGeometry ??
+                        _addresses.map((a) => LatLng(a.latitude, a.longitude)).toList(),
                     color: const Color(0xFF53D6FF).withValues(alpha: 0.7),
                     strokeWidth: 3,
                   ),
@@ -244,6 +309,9 @@ class _GuestMapScreenState extends State<GuestMapScreen> {
                                 fontWeight: FontWeight.w700, color: Colors.white)),
                       ),
                     const Spacer(),
+                    _mapBtn(Icons.search_rounded,
+                        onTap: () => setState(() => _showSearch = !_showSearch)),
+                    const SizedBox(width: 8),
                     _mapBtn(Icons.fit_screen_rounded,
                         onTap: () => _mapController.move(_center, 12)),
                   ]),
@@ -252,8 +320,97 @@ class _GuestMapScreenState extends State<GuestMapScreen> {
             ),
           ),
 
+          // Adres arama
+          if (_showSearch)
+            Positioned(
+              top: 70, left: 16, right: 16,
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0A1628).withValues(alpha: 0.95),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 12)],
+                ),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Row(children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        autofocus: true,
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        textInputAction: TextInputAction.search,
+                        onSubmitted: _searchAddress,
+                        decoration: InputDecoration(
+                          hintText: 'Adres, sokak veya semt yaz...',
+                          hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13),
+                          border: InputBorder.none,
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => _searchAddress(_searchController.text),
+                      child: Icon(Icons.search_rounded,
+                          color: Colors.white.withValues(alpha: 0.8), size: 20),
+                    ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () => setState(() {
+                        _showSearch = false;
+                        _searchResults = [];
+                        _searchController.clear();
+                      }),
+                      child: Icon(Icons.close_rounded,
+                          color: Colors.white.withValues(alpha: 0.6), size: 20),
+                    ),
+                  ]),
+                  if (_isSearching)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 10, bottom: 4),
+                      child: SizedBox(
+                        width: 16, height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF53D6FF)),
+                      ),
+                    )
+                  else if (_searchResults.isNotEmpty) ...[
+                    const Divider(color: Colors.white24, height: 16),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 260),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _searchResults.length,
+                        itemBuilder: (context, i) {
+                          final r = _searchResults[i];
+                          return GestureDetector(
+                            onTap: () => _selectSearchResult(r),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                              child: Row(children: [
+                                const Icon(Icons.location_on_rounded,
+                                    color: Color(0xFF53D6FF), size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    (r['display_name'] as String? ?? '').split(',').take(3).join(','),
+                                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ]),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ]),
+              ),
+            ),
+
           // İpucu
-          if (!showPanel)
+          if (!showPanel && !_showSearch)
             Positioned(
               top: 90, left: 0, right: 0,
               child: Center(

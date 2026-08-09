@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/guest/guest_route_service.dart';
+import 'guest_saved_route_detail_screen.dart';
 
 class GuestHistoryScreen extends StatefulWidget {
   const GuestHistoryScreen({super.key});
@@ -90,7 +91,14 @@ class _GuestHistoryScreenState extends State<GuestHistoryScreen> {
                       itemCount: _routes.length,
                       itemBuilder: (context, index) {
                         final route = _routes[index];
-                        return Container(
+                        return GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => GuestSavedRouteDetailScreen(route: route),
+                            ),
+                          ),
+                          child: Container(
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -130,6 +138,7 @@ class _GuestHistoryScreenState extends State<GuestHistoryScreen> {
                             const Icon(Icons.chevron_right_rounded,
                                 color: Color(0xFF9DAFC8), size: 18),
                           ]),
+                          ),
                         );
                       },
                     ),

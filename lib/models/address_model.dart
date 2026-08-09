@@ -12,6 +12,7 @@ class Address {
   final String customerType;
   final bool isCompleted;
   final String? notes;
+  final String? phone;
 
   /// Bu durak, sürücünün rotaya başladığı hastane/başlangıç noktasıysa
   /// true. Sürücü zaten orada olduğu için otomatik tamamlanmış sayılır,
@@ -37,6 +38,7 @@ class Address {
     required this.customerType,
     this.isCompleted = false,
     this.notes,
+    this.phone,
     this.isStartPoint = false,
     this.isReturnToBase = false,
   });
@@ -77,6 +79,7 @@ class Address {
       ),
       isCompleted: _toBool(json['completed'] ?? json['isCompleted'], false),
       notes: json['notes']?.toString(),
+      phone: _toNullableString(json['phone'] ?? json['customerPhone'] ?? json['telefon']),
     );
   }
 
@@ -95,6 +98,7 @@ class Address {
       'customerType': customerType,
       'completed': isCompleted,
       'notes': notes,
+      'phone': phone,
     };
   }
 
@@ -103,6 +107,7 @@ class Address {
     int? orderNumber,
     bool? isStartPoint,
     bool? isReturnToBase,
+    String? notes,
   }) {
     return Address(
       id: id,
@@ -117,7 +122,7 @@ class Address {
       customerName: customerName,
       customerType: customerType,
       isCompleted: isCompleted ?? this.isCompleted,
-      notes: notes,
+      notes: notes ?? this.notes,
       isStartPoint: isStartPoint ?? this.isStartPoint,
       isReturnToBase: isReturnToBase ?? this.isReturnToBase,
     );
@@ -127,6 +132,12 @@ class Address {
     if (value == null) return fallback;
     final text = value.toString().trim();
     return text.isEmpty ? fallback : text;
+  }
+
+  static String? _toNullableString(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    return text.isEmpty ? null : text;
   }
 
   static int _toInt(dynamic value, int fallback) {

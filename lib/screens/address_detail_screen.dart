@@ -282,7 +282,9 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: _actionCard(Icons.call_rounded, 'Ara', AppColors.textMid, () => _launchCall('+90 532 000 00 00')),
+                        child: address.phone == null
+                            ? _actionCard(Icons.call_rounded, 'Ara', AppColors.stroke, null)
+                            : _actionCard(Icons.call_rounded, 'Ara', AppColors.textMid, () => _launchCall(address.phone!)),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -326,7 +328,15 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                               ],
                             ),
                             GestureDetector(
-                              onTap: () => setState(() => _editingNote = !_editingNote),
+                              onTap: () {
+                                if (_editingNote) {
+                                  context.read<RouteProvider>().updateNote(
+                                        widget.index,
+                                        _noteController.text,
+                                      );
+                                }
+                                setState(() => _editingNote = !_editingNote);
+                              },
                               child: Text(
                                 _editingNote ? 'Kaydet' : 'Düzenle',
                                 style: const TextStyle(fontSize: 13, color: AppColors.accent, fontWeight: FontWeight.w600),
@@ -423,7 +433,7 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
     );
   }
 
-  Widget _actionCard(IconData icon, String label, Color color, VoidCallback onTap) {
+  Widget _actionCard(IconData icon, String label, Color color, VoidCallback? onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(

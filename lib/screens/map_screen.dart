@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../services/route_provider.dart';
+import '../services/tomtom_routing_service.dart';
 import '../models/address_model.dart';
 import '../theme/app_colors.dart';
 
@@ -22,11 +23,92 @@ class _MapScreenState extends State<MapScreen> {
   LatLng? _pendingPin;
   String? _pendingAddressText;
   bool _isGeocoding = false;
+  List<LatLng>? _routeGeometry;
+  String? _geometrySignature;
+
+  bool _showSearch = false;
+  final _searchController = TextEditingController();
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // Nominatim usage policy metin başına en fazla 1 istek istiyor — bu yüzden
+  // her tuş vuruşunda değil, sadece kullanıcı arama yapmayı onayladığında
+  // (Enter / arama ikonu) çağrılır, yazarken otomatik tetiklenmez.
+  Future<void> _searchAddress(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return;
+    setState(() { _isSearching = true; _searchResults = []; });
+    try {
+      final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
+        'q': trimmed,
+        'format': 'json',
+        'addressdetails': '1',
+        'limit': '6',
+        'countrycodes': 'tr',
+        'accept-language': 'tr',
+      });
+      final res = await http.get(uri, headers: {'User-Agent': 'RotaMobil/1.0'});
+      if (res.statusCode == 200) {
+        final results = (jsonDecode(res.body) as List).cast<Map<String, dynamic>>();
+        if (mounted) setState(() { _searchResults = results; _isSearching = false; });
+      } else if (mounted) {
+        setState(() => _isSearching = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isSearching = false);
+    }
+  }
+
+  void _selectSearchResult(Map<String, dynamic> result) {
+    final lat = double.tryParse(result['lat']?.toString() ?? '');
+    final lon = double.tryParse(result['lon']?.toString() ?? '');
+    if (lat == null || lon == null) return;
+    final addr = result['address'] as Map<String, dynamic>? ?? {};
+    final road = (addr['road'] ?? addr['pedestrian'] ?? addr['suburb'] ?? '').toString();
+    final district = (addr['suburb'] ?? addr['district'] ?? addr['town'] ?? '').toString();
+    final short = road.isNotEmpty
+        ? '$road${district.isNotEmpty ? ', $district' : ''}'
+        : (result['display_name'] as String? ?? '').split(',').take(2).join(',');
+    final point = LatLng(lat, lon);
+    setState(() {
+      _selectedIndex = null;
+      _pendingPin = point;
+      _pendingAddressText = short.isNotEmpty ? short : null;
+      _isGeocoding = false;
+      _showSearch = false;
+      _searchResults = [];
+      _searchController.clear();
+    });
+    _mapController.move(point, 16);
+  }
+
+  // Backend/sürücünün belirlediği durak sırasını bozmadan, TomTom'dan
+  // gerçek yol geometrisini çeker. Adres listesi (veya sırası) değişmediği
+  // sürece tekrar istek atmaz.
+  void _syncRouteGeometry(List<Address> addresses) {
+    if (addresses.length < 2) return;
+    final signature = addresses.map((a) => '${a.id}:${a.orderNumber}').join(',');
+    if (signature == _geometrySignature) return;
+    _geometrySignature = signature;
+    TomTomRoutingService.fetchRouteGeometry(
+      addresses.map((a) => LatLng(a.latitude, a.longitude)).toList(),
+    ).then((geometry) {
+      if (mounted && _geometrySignature == signature) {
+        setState(() => _routeGeometry = geometry);
+      }
+    });
   }
 
   LatLng _center(List<Address> addresses) {
@@ -141,6 +223,7 @@ class _MapScreenState extends State<MapScreen> {
     return Consumer<RouteProvider>(
       builder: (context, provider, _) {
         final addresses = provider.addresses;
+        _syncRouteGeometry(addresses);
         final center = _center(addresses);
         final selectedAddress = _selectedIndex != null && _selectedIndex! < addresses.length
             ? addresses[_selectedIndex!]
@@ -165,7 +248,8 @@ class _MapScreenState extends State<MapScreen> {
                   PolylineLayer(
                     polylines: [
                       Polyline(
-                        points: addresses.map((a) => LatLng(a.latitude, a.longitude)).toList(),
+                        points: _routeGeometry ??
+                            addresses.map((a) => LatLng(a.latitude, a.longitude)).toList(),
                         color: AppColors.accent.withValues(alpha: 0.8),
                         strokeWidth: 3,
                       ),
@@ -264,6 +348,9 @@ class _MapScreenState extends State<MapScreen> {
                               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                         ),
                         const Spacer(),
+                        _mapButton(Icons.search_rounded,
+                            () => setState(() => _showSearch = !_showSearch)),
+                        const SizedBox(width: 8),
                         _mapButton(Icons.fit_screen_rounded, () => _mapController.move(center, 12)),
                         const SizedBox(width: 8),
                         _mapButton(Icons.refresh_rounded, provider.refresh),
@@ -273,8 +360,93 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ),
 
+              // Adres arama
+              if (_showSearch)
+                Positioned(
+                  top: 70, left: 12, right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.textDark.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 12)],
+                    ),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Row(children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            autofocus: true,
+                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            textInputAction: TextInputAction.search,
+                            onSubmitted: _searchAddress,
+                            decoration: InputDecoration(
+                              hintText: 'Adres, sokak veya semt yaz...',
+                              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13),
+                              border: InputBorder.none,
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => _searchAddress(_searchController.text),
+                          child: const Icon(Icons.search_rounded, color: Colors.white70, size: 20),
+                        ),
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: () => setState(() {
+                            _showSearch = false;
+                            _searchResults = [];
+                            _searchController.clear();
+                          }),
+                          child: const Icon(Icons.close_rounded, color: Colors.white60, size: 20),
+                        ),
+                      ]),
+                      if (_isSearching)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 10, bottom: 4),
+                          child: SizedBox(
+                            width: 16, height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          ),
+                        )
+                      else if (_searchResults.isNotEmpty) ...[
+                        const Divider(color: Colors.white24, height: 16),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 260),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: _searchResults.length,
+                            itemBuilder: (context, i) {
+                              final r = _searchResults[i];
+                              return GestureDetector(
+                                onTap: () => _selectSearchResult(r),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                                  child: Row(children: [
+                                    const Icon(Icons.location_on_rounded, color: AppColors.accent, size: 16),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        (r['display_name'] as String? ?? '').split(',').take(3).join(','),
+                                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ]),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ]),
+                  ),
+                ),
+
               // İpucu
-              if (!showBottomSheet)
+              if (!showBottomSheet && !_showSearch)
                 Positioned(
                   top: 80, left: 0, right: 0,
                   child: Center(
