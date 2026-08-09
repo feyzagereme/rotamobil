@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Backend artik HTTPS (Render) uzerinden calisiyor, cleartext istisnasina gerek yok. -->
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">100.118.211.75</domain>
-    </domain-config>
 </network-security-config>
