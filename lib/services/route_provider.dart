@@ -34,17 +34,24 @@ class RouteProvider extends ChangeNotifier {
   bool _isOptimizing = false;
   String? _optimizeError;
 
-  // Backend 401/403 döndüğünde (token süresi dolmuş ya da admin tarafından
-  // iptal edilmiş) true olur. UI katmanı bunu dinleyip kullanıcıyı login
-  // ekranına yönlendirmeli — aksi halde kullanıcı "giriş yapmış" görünüp
-  // aslında hiçbir isteği çalışmayan bir durumda takılı kalır.
+  // Backend, token süresi dolmuş/iptal edilmiş durumları gövdede
+  // code: "SESSION_EXPIRED" ile işaretler (bkz. server.js authenticateToken).
+  // 403 ayrıca sahiplik/rol reddi için de kullanıldığından (canAccessUser,
+  // requireRole) sadece statusCode'a bakmak yanlış pozitiflere yol açıyordu
+  // — ör. başka bir kullanıcının rotası tamamlanmaya çalışılınca dönen
+  // "Bu veriye erişim yetkiniz yok" 403'ü oturum bitmiş sanılıp kullanıcı
+  // gereksiz yere login'e atılıyordu. Artık sadece gerçek SESSION_EXPIRED
+  // işaretinde tetikleniyor.
   bool _sessionExpired = false;
   bool get sessionExpired => _sessionExpired;
   void clearSessionExpired() => _sessionExpired = false;
-  void _flagIfSessionError(int statusCode) {
-    if (statusCode == 401 || statusCode == 403) {
-      _sessionExpired = true;
-    }
+  void _flagIfSessionError(String responseBody) {
+    try {
+      final decoded = jsonDecode(responseBody);
+      if (decoded is Map && decoded['code'] == 'SESSION_EXPIRED') {
+        _sessionExpired = true;
+      }
+    } catch (_) {}
   }
 
   RouteProvider() {
@@ -172,7 +179,7 @@ class RouteProvider extends ChangeNotifier {
       }
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        _flagIfSessionError(response.statusCode);
+        _flagIfSessionError(response.body);
         throw Exception('Sunucu hatası: ${response.statusCode}');
       }
 
@@ -282,7 +289,7 @@ class RouteProvider extends ChangeNotifier {
       ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        _flagIfSessionError(response.statusCode);
+        _flagIfSessionError(response.body);
         _addresses[index] = current;
         _errorMessage =
             'Tamamlandı bilgisi kaydedilemedi: ${response.statusCode}';
@@ -315,7 +322,7 @@ class RouteProvider extends ChangeNotifier {
       ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        _flagIfSessionError(response.statusCode);
+        _flagIfSessionError(response.body);
         _addresses[index] = current;
         _errorMessage = 'Not kaydedilemedi: ${response.statusCode}';
         notifyListeners();
@@ -344,7 +351,7 @@ class RouteProvider extends ChangeNotifier {
       ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        _flagIfSessionError(response.statusCode);
+        _flagIfSessionError(response.body);
         _routeStatus = previousStatus;
         _errorMessage = 'Rota tamamlanamadı: ${response.statusCode}';
         notifyListeners();
@@ -418,7 +425,7 @@ class RouteProvider extends ChangeNotifier {
       ).timeout(const Duration(seconds: 20));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        _flagIfSessionError(response.statusCode);
+        _flagIfSessionError(response.body);
         _optimizeError = 'Rota optimize edilemedi: ${response.statusCode}';
         return false;
       }
