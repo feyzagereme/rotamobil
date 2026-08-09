@@ -34,6 +34,11 @@ class RouteProvider extends ChangeNotifier {
   bool _isOptimizing = false;
   String? _optimizeError;
 
+  // Sürücü durak sırasını değiştirdiğinde bu flag true olur ve
+  // backend'e persist çağrısı tamamlanana kadar otomatik sync'in
+  // adres listesini üzerine yazması engellenir.
+  bool _persistPending = false;
+
   // Backend, token süresi dolmuş/iptal edilmiş durumları gövdede
   // code: "SESSION_EXPIRED" ile işaretler (bkz. server.js authenticateToken).
   // 403 ayrıca sahiplik/rol reddi için de kullanıldığından (canAccessUser,
@@ -184,7 +189,12 @@ class RouteProvider extends ChangeNotifier {
       }
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      _applyRouteData(decoded);
+      // Sürücü sürükleme ile sıra değiştirdiyse ve backend'e henüz
+      // kaydedilmediyse, sync verisi adres listesini ezmemeli.
+      // Persist tamamlandıktan sonraki sync doğru sırayı getirir.
+      if (!_persistPending) {
+        _applyRouteData(decoded);
+      }
       _isOffline = false;
       _cachedAt = DateTime.now();
       _errorMessage = null;
@@ -269,6 +279,7 @@ class RouteProvider extends ChangeNotifier {
   /// backend'in sırası geri yüklenir, kullanıcıya hata gösterilmez.
   Future<void> _persistStopOrder() async {
     if (_activeRouteId == null || _addresses.isEmpty) return;
+    _persistPending = true;
     try {
       final stops = _addresses
           .map((a) => {'id': a.id, 'order': a.orderNumber})
@@ -280,12 +291,77 @@ class RouteProvider extends ChangeNotifier {
       ).timeout(const Duration(seconds: 10));
     } catch (_) {
       // Ağ hatası — sessizce geç, sonraki sync düzeltir
+    } finally {
+      _persistPending = false;
     }
   }
 
   void addAddress(Address address) {
     _addresses.add(address);
     notifyListeners();
+  }
+
+  /// Haritadan seçilen konumu hem yerel listeye hem backend'e kaydeder.
+  /// Başarı → null döner. Hata → Türkçe hata mesajı döner.
+  /// Backend başarısız olursa optimistik ekleme geri alınır; 10 sn sync
+  /// bozuk veri bırakmaz.
+  Future<String?> addAddressAndPersist(Address address) async {
+    if (_activeRouteId == null) {
+      return 'Aktif rota bulunamadı. Lütfen rotanın yüklendiğinden emin olun.';
+    }
+
+    // Optimistik güncelleme — UI anında tepki verir
+    _addresses.add(address);
+    notifyListeners();
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/routes/$_activeRouteId/stops'),
+        headers: await AuthService.authHeaders(),
+        body: jsonEncode({
+          'stop': {
+            'street': address.street,
+            'district': address.district,
+            'city': address.city,
+            'postalCode': address.postalCode,
+            'latitude': address.latitude,
+            'longitude': address.longitude,
+            'customerName': address.customerName,
+            'customerType': address.customerType,
+          },
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Backend'den gelen gerçek ID ile lokal kaydı senkronize et
+        try {
+          final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+          final backendStop = decoded['stop'] as Map<String, dynamic>?;
+          if (backendStop != null) {
+            final updated = Address.fromRouteStop(
+              backendStop,
+              fallbackOrder: address.orderNumber,
+            );
+            _addresses[_addresses.length - 1] = updated;
+            notifyListeners();
+          }
+        } catch (_) {
+          // ID güncellenemedi — lokal veri kalır, sıradaki sync tamamlar
+        }
+        return null; // Başarılı
+      }
+
+      _flagIfSessionError(response.body);
+      // Optimistik eklemeyi geri al
+      if (_addresses.isNotEmpty) _addresses.removeLast();
+      notifyListeners();
+      return 'Durak eklenemedi (${response.statusCode})';
+    } catch (_) {
+      // Ağ hatası — optimistik eklemeyi geri al
+      if (_addresses.isNotEmpty) _addresses.removeLast();
+      notifyListeners();
+      return 'Sunucuya bağlanılamadı';
+    }
   }
 
   void removeAddress(int index) {

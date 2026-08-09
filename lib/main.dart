@@ -20,6 +20,7 @@ import 'services/fleet_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'services/notification_service.dart';
 import 'theme/app_colors.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,11 +45,21 @@ void main() async {
   }
   await initializeDateFormatting('tr_TR');
   final loggedIn = await AuthService.isLoggedIn();
+
+  // assigned_vehicle_id'i burada senkron okuyoruz; VehicleProvider'a
+  // ilk değer olarak veriyoruz. Böylece _handleVehicleChange()'in
+  // async _restore()'dan önce ateşlenmesi durumunda bile doğru araç
+  // yüklenir (ör. ilk oturum açılışında selected_vehicle_id henüz yok).
+  final startPrefs = await SharedPreferences.getInstance();
+  final assignedVehicleId = startPrefs.getInt('assigned_vehicle_id');
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => RouteProvider()),
-        ChangeNotifierProvider(create: (_) => VehicleProvider()),
+        ChangeNotifierProvider(
+          create: (_) => VehicleProvider(initialVehicleId: assignedVehicleId),
+        ),
         ChangeNotifierProvider(create: (_) => FleetProvider()),
       ],
       child: RotaMobilApp(startLoggedIn: loggedIn),

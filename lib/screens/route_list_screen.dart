@@ -43,7 +43,14 @@ class _RouteListScreenState extends State<RouteListScreen> {
     setState(() { _isLoadingRoutes = true; _routeError = null; });
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getInt("user_id") ?? 1;
+      final userId = prefs.getInt("user_id");
+      if (userId == null) {
+        setState(() {
+          _routeError = 'Kullanıcı bilgisi bulunamadı. Lütfen tekrar giriş yapın.';
+          _isLoadingRoutes = false;
+        });
+        return;
+      }
       final response = await http.get(
         Uri.parse("${AppConfig.backendBaseUrl}/routes/$userId"),
         headers: await AuthService.authHeaders(),

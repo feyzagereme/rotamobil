@@ -1,62 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 
-class RegisterScreen extends StatefulWidget {
+/// Rota360 sürücü hesapları sistem yöneticisi tarafından oluşturulur.
+/// Bu ekran kullanıcıya o bilgiyi açıklar ve yöneticiyle iletişim kurmak
+/// için bir e-posta kısayolu sunar.
+class RegisterScreen extends StatelessWidget {
   const RegisterScreen({super.key});
 
-  @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
-}
+  static const String _adminEmail = '360.rotaa@gmail.com';
 
-class _RegisterScreenState extends State<RegisterScreen> {
-  final _nameCtrl = TextEditingController();
-  final _usernameCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  final _confirmPasswordCtrl = TextEditingController();
-
-  bool _passwordVisible = false;
-  bool _confirmPasswordVisible = false;
-  String? _errorMessage;
-
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    _usernameCtrl.dispose();
-    _phoneCtrl.dispose();
-    _passwordCtrl.dispose();
-    _confirmPasswordCtrl.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final name = _nameCtrl.text.trim();
-    final username = _usernameCtrl.text.trim();
-    final password = _passwordCtrl.text;
-    final confirmPassword = _confirmPasswordCtrl.text;
-
-    if (name.isEmpty || username.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = 'Ad soyad, kullanıcı adı ve şifre boş bırakılamaz.');
-      return;
-    }
-    if (password.length < 6) {
-      setState(() => _errorMessage = 'Şifre en az 6 karakter olmalı.');
-      return;
-    }
-    if (password != confirmPassword) {
-      setState(() => _errorMessage = 'Şifreler eşleşmiyor.');
-      return;
-    }
-
-    setState(() => _errorMessage = null);
-
-    // Kayıt endpoint'i backend'de henüz yok; şimdilik sadece arayüz.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Kayıt özelliği yakında aktif olacak.'),
-        backgroundColor: AppColors.primaryDark,
-      ),
+  Future<void> _openEmail(BuildContext context) async {
+    final uri = Uri(
+      scheme: 'mailto',
+      path: _adminEmail,
+      queryParameters: {
+        'subject': 'Rota360 Sürücü Hesabı Talebi',
+        'body': 'Merhaba,\n\nRota360 uygulaması için sürücü hesabı oluşturulmasını talep ediyorum.\n\nAd Soyad: \nBirim/Araç: ',
+      },
     );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('E-posta uygulaması açılamadı. $_adminEmail adresine yazabilirsiniz.'),
+            backgroundColor: AppColors.primaryDark,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -74,8 +49,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     // Logo
                     Container(
-                      width: 72,
-                      height: 72,
+                      width: 80,
+                      height: 80,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
@@ -88,169 +63,87 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
+
                     const Text(
-                      'Hesap Oluştur',
+                      'Hesap Nasıl Oluşturulur?',
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 26,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                        letterSpacing: 0.3,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Sürücü hesabı için bilgilerinizi girin',
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
                     ),
                     const SizedBox(height: 32),
 
-                    // Form kartı
+                    // Bilgi kartı
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 20,
+                            blurRadius: 24,
                             offset: const Offset(0, 8),
                           ),
                         ],
                       ),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _fieldLabel('Ad Soyad'),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _nameCtrl,
-                            textInputAction: TextInputAction.next,
-                            decoration: _fieldDecoration(
-                              hint: 'Adınızı ve soyadınızı girin',
-                              icon: Icons.badge_outlined,
-                            ),
+                          _infoRow(
+                            icon: Icons.admin_panel_settings_rounded,
+                            color: AppColors.accent,
+                            title: 'Yönetici tarafından oluşturulur',
+                            subtitle: 'Rota360 sürücü hesapları bağımsız kayıt desteklemez. '
+                                'Hesabınız sistem yöneticiniz tarafından oluşturulur.',
                           ),
-                          const SizedBox(height: 20),
-
-                          _fieldLabel('Kullanıcı Adı'),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _usernameCtrl,
-                            textInputAction: TextInputAction.next,
-                            autocorrect: false,
-                            decoration: _fieldDecoration(
-                              hint: 'Bir kullanıcı adı belirleyin',
-                              icon: Icons.person_outline,
-                            ),
+                          const Divider(height: 28, color: AppColors.stroke),
+                          _infoRow(
+                            icon: Icons.email_rounded,
+                            color: AppColors.success,
+                            title: 'Yöneticinize başvurun',
+                            subtitle: 'Hesap talebinizi $_adminEmail adresine iletebilirsiniz.',
                           ),
-                          const SizedBox(height: 20),
-
-                          _fieldLabel('Telefon (opsiyonel)'),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _phoneCtrl,
-                            keyboardType: TextInputType.phone,
-                            textInputAction: TextInputAction.next,
-                            decoration: _fieldDecoration(
-                              hint: '05XX XXX XX XX',
-                              icon: Icons.phone_outlined,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-
-                          _fieldLabel('Şifre'),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _passwordCtrl,
-                            obscureText: !_passwordVisible,
-                            textInputAction: TextInputAction.next,
-                            decoration: _fieldDecoration(
-                              hint: 'En az 6 karakter',
-                              icon: Icons.lock_outline,
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _passwordVisible ? Icons.visibility_off : Icons.visibility,
-                                  color: AppColors.textLight,
-                                ),
-                                onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-
-                          _fieldLabel('Şifre Tekrar'),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _confirmPasswordCtrl,
-                            obscureText: !_confirmPasswordVisible,
-                            textInputAction: TextInputAction.done,
-                            onSubmitted: (_) => _submit(),
-                            decoration: _fieldDecoration(
-                              hint: 'Şifrenizi tekrar girin',
-                              icon: Icons.lock_outline,
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _confirmPasswordVisible ? Icons.visibility_off : Icons.visibility,
-                                  color: AppColors.textLight,
-                                ),
-                                onPressed: () =>
-                                    setState(() => _confirmPasswordVisible = !_confirmPasswordVisible),
-                              ),
-                            ),
-                          ),
-
-                          if (_errorMessage != null) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: AppColors.error.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.error_outline, color: AppColors.error, size: 18),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _errorMessage!,
-                                      style: const TextStyle(color: AppColors.error, fontSize: 13),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-
-                          const SizedBox(height: 24),
-
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: _submit,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primaryDark,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                elevation: 0,
-                              ),
-                              child: const Text(
-                                'Kayıt Ol',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                              ),
-                            ),
+                          const Divider(height: 28, color: AppColors.stroke),
+                          _infoRow(
+                            icon: Icons.lock_reset_rounded,
+                            color: AppColors.warning,
+                            title: 'Şifrenizi mi unuttunuz?',
+                            subtitle: 'Giriş ekranındaki "Şifremi Unuttum" seçeneğini kullanın '
+                                'veya yöneticinize başvurun.',
                           ),
                         ],
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
+
+                    // Yöneticiye e-posta at
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _openEmail(context),
+                        icon: const Icon(Icons.email_rounded, size: 18),
+                        label: const Text('Yöneticiye Yaz'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          foregroundColor: AppColors.primaryDark,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                          textStyle: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: const Text(
@@ -265,8 +158,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
             // Geri butonu
             Positioned(
-              top: 4,
-              left: 12,
+              top: 4, left: 12,
               child: IconButton(
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -278,37 +170,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _fieldLabel(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: AppColors.textDark,
-      ),
-    );
-  }
-
-  InputDecoration _fieldDecoration({
-    required String hint,
+  Widget _infoRow({
     required IconData icon,
-    Widget? suffixIcon,
+    required Color color,
+    required String title,
+    required String subtitle,
   }) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: AppColors.textLight, fontSize: 14),
-      prefixIcon: Icon(icon, color: AppColors.textLight),
-      suffixIcon: suffixIcon,
-      filled: true,
-      fillColor: AppColors.lightBg,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-      ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 40, height: 40,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: const TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.w700,
+                    color: AppColors.textDark,
+                  )),
+              const SizedBox(height: 4),
+              Text(subtitle,
+                  style: const TextStyle(
+                    fontSize: 13, color: AppColors.textMid, height: 1.4,
+                  )),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

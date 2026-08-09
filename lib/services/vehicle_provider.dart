@@ -10,7 +10,13 @@ class VehicleProvider extends ChangeNotifier {
 
   int _selectedVehicleId = 0;
 
-  VehicleProvider() {
+  /// [initialVehicleId]: main() içinde prefs'ten senkron okunan
+  /// assigned_vehicle_id değeri. Async _restore() bitmeden önce
+  /// _handleVehicleChange() ateşlendiğinde doğru aracın yüklenmesini sağlar.
+  VehicleProvider({int? initialVehicleId}) {
+    if (initialVehicleId != null && initialVehicleId >= 0) {
+      _selectedVehicleId = initialVehicleId;
+    }
     _restore();
   }
 
@@ -20,10 +26,25 @@ class VehicleProvider extends ChangeNotifier {
 
   Future<void> _restore() async {
     final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getInt(_prefsKey);
-    if (stored != null && stored >= 0 && stored < vehicleCount) {
-      _selectedVehicleId = stored;
-      notifyListeners();
+
+    // 1) Son elle yapılan seçim (örn. dispatcher UI)
+    final manual = prefs.getInt(_prefsKey);
+    if (manual != null && manual >= 0 && manual < vehicleCount) {
+      if (_selectedVehicleId != manual) {
+        _selectedVehicleId = manual;
+        notifyListeners();
+      }
+      return;
+    }
+
+    // 2) Giriş sırasında backend'den gelen atanmış araç
+    //    (auth_service.login → "assigned_vehicle_id")
+    final assigned = prefs.getInt('assigned_vehicle_id');
+    if (assigned != null && assigned >= 0) {
+      if (_selectedVehicleId != assigned) {
+        _selectedVehicleId = assigned;
+        notifyListeners();
+      }
     }
   }
 
