@@ -244,10 +244,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _card([
                       _infoRow(Icons.person_rounded, 'Kullanıcı Adı', _username),
                       _divider(),
-                      _infoRow(Icons.business_rounded, 'Kurum', 'Tekirdağ Şehir Hastanesi'),
-                      _divider(),
-                      _infoRow(Icons.local_hospital_rounded, 'Birim', 'Palyatif Bakım'),
-                      _divider(),
                       _infoRow(Icons.info_outline_rounded, 'Versiyon', 'v1.0.0'),
                     ]),
 
