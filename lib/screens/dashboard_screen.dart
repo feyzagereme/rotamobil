@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/route_provider.dart';
+import '../services/vehicle_provider.dart';
 import '../theme/app_colors.dart';
 import 'address_detail_screen.dart';
 
@@ -94,6 +95,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ],
               ),
+              // ── Araç seçici — tüm sürücüler aynı hesapla giriş yaptığı için
+              // hangi aracın rotasını izleyecekleri burada seçiliyor
+              // (bkz. vehicle_provider.dart). Önceden bu seçimi yapacak
+              // hiçbir arayüz yoktu, sadece girişte otomatik atanan araca
+              // kilitleniyordu.
+              const SliverToBoxAdapter(child: _VehicleSelectorRow()),
+
               // ── Araç rotası bildirimi
               if (_bannerVisible && hasRoute)
                 SliverToBoxAdapter(
@@ -384,6 +392,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 2),
             Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textLight)),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Araç seçici — tüm sürücüler aynı hesapla giriş yaptığı için hangi
+// aracın rotasını/filo durumunu izleyecekleri burada seçilir. Seçim
+// VehicleProvider üzerinden RouteProvider ve FleetProvider'a yayılır
+// (bkz. main.dart _handleVehicleChange).
+class _VehicleSelectorRow extends StatelessWidget {
+  const _VehicleSelectorRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final vehicleProvider = context.watch<VehicleProvider>();
+    final selected = vehicleProvider.selectedVehicleId;
+
+    return Container(
+      color: AppColors.surface,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      child: SizedBox(
+        height: 34,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: VehicleProvider.vehicleCount,
+          separatorBuilder: (_, _) => const SizedBox(width: 8),
+          itemBuilder: (context, index) {
+            final isSelected = index == selected;
+            return GestureDetector(
+              onTap: () => context.read<VehicleProvider>().select(index),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primaryDark : AppColors.bgLight,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected ? AppColors.primaryDark : AppColors.stroke,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.local_shipping_rounded,
+                        size: 14,
+                        color: isSelected ? Colors.white : AppColors.textMid),
+                    const SizedBox(width: 6),
+                    Text(
+                      vehicleProvider.labelFor(index),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected ? Colors.white : AppColors.textMid,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
