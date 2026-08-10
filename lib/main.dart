@@ -20,6 +20,7 @@ import 'services/fleet_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'services/notification_service.dart';
 import 'theme/app_colors.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,11 +45,21 @@ void main() async {
   }
   await initializeDateFormatting('tr_TR');
   final loggedIn = await AuthService.isLoggedIn();
+
+  // assigned_vehicle_id'i burada senkron okuyoruz; VehicleProvider'a
+  // ilk değer olarak veriyoruz. Böylece _handleVehicleChange()'in
+  // async _restore()'dan önce ateşlenmesi durumunda bile doğru araç
+  // yüklenir (ör. ilk oturum açılışında selected_vehicle_id henüz yok).
+  final startPrefs = await SharedPreferences.getInstance();
+  final assignedVehicleId = startPrefs.getInt('assigned_vehicle_id');
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => RouteProvider()),
-        ChangeNotifierProvider(create: (_) => VehicleProvider()),
+        ChangeNotifierProvider(
+          create: (_) => VehicleProvider(initialVehicleId: assignedVehicleId),
+        ),
         ChangeNotifierProvider(create: (_) => FleetProvider()),
       ],
       child: RotaMobilApp(startLoggedIn: loggedIn),
@@ -138,6 +149,7 @@ class _MainAppState extends State<MainApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<VehicleProvider>().addListener(_handleVehicleChange);
+      context.read<RouteProvider>().addListener(_handleSessionExpiry);
       _handleVehicleChange();
     });
   }
@@ -150,10 +162,29 @@ class _MainAppState extends State<MainApp> {
     context.read<FleetProvider>().switchVehicle(vehicleId);
   }
 
+  // Backend 401/403 döndüğünde (token süresi dolmuş/iptal edilmiş) oturumu
+  // temizleyip kullanıcıyı login ekranına atar — aksi halde "giriş yapmış"
+  // görünüp hiçbir isteği çalışmayan bir ekranda takılı kalırdı.
+  bool _handlingSessionExpiry = false;
+  void _handleSessionExpiry() {
+    if (_handlingSessionExpiry) return;
+    if (!context.read<RouteProvider>().sessionExpired) return;
+    _handlingSessionExpiry = true;
+    context.read<RouteProvider>().clearSessionExpired();
+    AuthService.logout().then((_) {
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/login',
+        (route) => false,
+      );
+    });
+  }
+
   @override
   void dispose() {
     LocationService.stopTracking();
     context.read<VehicleProvider>().removeListener(_handleVehicleChange);
+    context.read<RouteProvider>().removeListener(_handleSessionExpiry);
     super.dispose();
   }
 

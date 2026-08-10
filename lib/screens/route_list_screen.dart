@@ -6,6 +6,7 @@ import 'address_detail_screen.dart';
 import '../models/address_model.dart';
 import '../theme/app_colors.dart';
 import '../config/app_config.dart';
+import '../services/auth_service.dart';
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -42,9 +43,17 @@ class _RouteListScreenState extends State<RouteListScreen> {
     setState(() { _isLoadingRoutes = true; _routeError = null; });
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getInt("user_id") ?? 1;
+      final userId = prefs.getInt("user_id");
+      if (userId == null) {
+        setState(() {
+          _routeError = 'Kullanıcı bilgisi bulunamadı. Lütfen tekrar giriş yapın.';
+          _isLoadingRoutes = false;
+        });
+        return;
+      }
       final response = await http.get(
         Uri.parse("${AppConfig.backendBaseUrl}/routes/$userId"),
+        headers: await AuthService.authHeaders(),
       );
       if (response.statusCode == 200) {
         setState(() { _backendRoutes = jsonDecode(response.body); _isLoadingRoutes = false; });

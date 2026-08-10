@@ -34,6 +34,31 @@ class RouteProvider extends ChangeNotifier {
   bool _isOptimizing = false;
   String? _optimizeError;
 
+  // Sürücü durak sırasını değiştirdiğinde bu flag true olur ve
+  // backend'e persist çağrısı tamamlanana kadar otomatik sync'in
+  // adres listesini üzerine yazması engellenir.
+  bool _persistPending = false;
+
+  // Backend, token süresi dolmuş/iptal edilmiş durumları gövdede
+  // code: "SESSION_EXPIRED" ile işaretler (bkz. server.js authenticateToken).
+  // 403 ayrıca sahiplik/rol reddi için de kullanıldığından (canAccessUser,
+  // requireRole) sadece statusCode'a bakmak yanlış pozitiflere yol açıyordu
+  // — ör. başka bir kullanıcının rotası tamamlanmaya çalışılınca dönen
+  // "Bu veriye erişim yetkiniz yok" 403'ü oturum bitmiş sanılıp kullanıcı
+  // gereksiz yere login'e atılıyordu. Artık sadece gerçek SESSION_EXPIRED
+  // işaretinde tetikleniyor.
+  bool _sessionExpired = false;
+  bool get sessionExpired => _sessionExpired;
+  void clearSessionExpired() => _sessionExpired = false;
+  void _flagIfSessionError(String responseBody) {
+    try {
+      final decoded = jsonDecode(responseBody);
+      if (decoded is Map && decoded['code'] == 'SESSION_EXPIRED') {
+        _sessionExpired = true;
+      }
+    } catch (_) {}
+  }
+
   RouteProvider() {
     loadActiveRoute();
     startAutoSync();
@@ -159,11 +184,17 @@ class RouteProvider extends ChangeNotifier {
       }
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        _flagIfSessionError(response.body);
         throw Exception('Sunucu hatası: ${response.statusCode}');
       }
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      _applyRouteData(decoded);
+      // Sürücü sürükleme ile sıra değiştirdiyse ve backend'e henüz
+      // kaydedilmediyse, sync verisi adres listesini ezmemeli.
+      // Persist tamamlandıktan sonraki sync doğru sırayı getirir.
+      if (!_persistPending) {
+        _applyRouteData(decoded);
+      }
       _isOffline = false;
       _cachedAt = DateTime.now();
       _errorMessage = null;
@@ -233,43 +264,50 @@ class RouteProvider extends ChangeNotifier {
 
   Future<void> reorder(int oldIndex, int newIndex) async {
     if (newIndex > oldIndex) newIndex--;
-    final previous = List<Address>.from(_addresses);
     final item = _addresses.removeAt(oldIndex);
     _addresses.insert(newIndex, item);
+    // Yeni sıra numaralarını güncelle
+    for (int i = 0; i < _addresses.length; i++) {
+      _addresses[i] = _addresses[i].copyWith(orderNumber: i + 1);
+    }
     notifyListeners();
+    _persistStopOrder(); // Backend'e kaydet
+  }
 
-    if (_activeRouteId == null) return;
-
+  /// Sürücünün değiştirdiği durak sırasını backend'e gönderir.
+  /// Ağ hatası olursa sessizce geçer — bir sonraki 10sn senkronizasyonda
+  /// backend'in sırası geri yüklenir, kullanıcıya hata gösterilmez.
+  Future<void> _persistStopOrder() async {
+    if (_activeRouteId == null || _addresses.isEmpty) return;
+    _persistPending = true;
     try {
-      final response = await http.patch(
+      final stops = _addresses
+          .map((a) => {'id': a.id, 'order': a.orderNumber})
+          .toList();
+      await http.patch(
         Uri.parse('$_baseUrl/routes/$_activeRouteId/stops'),
         headers: await AuthService.authHeaders(),
-        body: jsonEncode({
-          'stops': _addresses
-              .asMap()
-              .entries
-              .map((e) => {'id': e.value.id, 'order': e.key + 1})
-              .toList(),
-        }),
-      );
-
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        _addresses = previous;
-        _errorMessage = 'Durak sırası kaydedilemedi: ${response.statusCode}';
-        notifyListeners();
-      }
-    } catch (e) {
-      _addresses = previous;
-      _errorMessage = 'Durak sırası gönderilemedi: $e';
-      notifyListeners();
+        body: jsonEncode({'stops': stops}),
+      ).timeout(const Duration(seconds: 10));
+    } catch (_) {
+      // Ağ hatası — sessizce geç, sonraki sync düzeltir
+    } finally {
+      _persistPending = false;
     }
   }
 
-  Future<void> addAddress(Address address) async {
+  /// Haritadan seçilen konumu hem yerel listeye hem backend'e kaydeder.
+  /// Başarı → null döner. Hata → Türkçe hata mesajı döner.
+  /// Backend başarısız olursa optimistik ekleme geri alınır; 10 sn sync
+  /// bozuk veri bırakmaz.
+  Future<String?> addAddressAndPersist(Address address) async {
+    if (_activeRouteId == null) {
+      return 'Aktif rota bulunamadı. Lütfen rotanın yüklendiğinden emin olun.';
+    }
+
+    // Optimistik güncelleme — UI anında tepki verir
     _addresses.add(address);
     notifyListeners();
-
-    if (_activeRouteId == null) return;
 
     try {
       final response = await http.post(
@@ -287,30 +325,37 @@ class RouteProvider extends ChangeNotifier {
             'customerType': address.customerType,
           },
         }),
-      );
+      ).timeout(const Duration(seconds: 10));
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-        final savedStop = decoded['stop'] as Map<String, dynamic>?;
-        if (savedStop != null) {
-          final index = _addresses.indexOf(address);
-          if (index != -1) {
-            _addresses[index] = Address.fromRouteStop(
-              savedStop,
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Backend'den gelen gerçek ID ile lokal kaydı senkronize et
+        try {
+          final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+          final backendStop = decoded['stop'] as Map<String, dynamic>?;
+          if (backendStop != null) {
+            final updated = Address.fromRouteStop(
+              backendStop,
               fallbackOrder: address.orderNumber,
             );
+            _addresses[_addresses.length - 1] = updated;
             notifyListeners();
           }
+        } catch (_) {
+          // ID güncellenemedi — lokal veri kalır, sıradaki sync tamamlar
         }
-      } else {
-        _addresses.remove(address);
-        _errorMessage = 'Durak kaydedilemedi: ${response.statusCode}';
-        notifyListeners();
+        return null; // Başarılı
       }
-    } catch (e) {
-      _addresses.remove(address);
-      _errorMessage = 'Durak gönderilemedi: $e';
+
+      _flagIfSessionError(response.body);
+      // Optimistik eklemeyi geri al
+      if (_addresses.isNotEmpty) _addresses.removeLast();
       notifyListeners();
+      return 'Durak eklenemedi (${response.statusCode})';
+    } catch (_) {
+      // Ağ hatası — optimistik eklemeyi geri al
+      if (_addresses.isNotEmpty) _addresses.removeLast();
+      notifyListeners();
+      return 'Sunucuya bağlanılamadı';
     }
   }
 
@@ -319,15 +364,24 @@ class RouteProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> toggleCompleted(int index) async {
-    if (index < 0 || index >= _addresses.length) return;
+  // Backend'e gerçekten kaydedilip kaydedilmediğini çağıran tarafın
+  // bilebilmesi için bool dönüyor — önceden void dönüyordu ve
+  // AddressDetailScreen bu sonucu hiç kontrol etmeden ekranda her zaman
+  // "Tamamlandı" gösteriyordu, kayıt sessizce başarısız olsa bile.
+  Future<bool> toggleCompleted(int index) async {
+    if (index < 0 || index >= _addresses.length) return false;
 
     final current = _addresses[index];
     final updated = current.copyWith(isCompleted: !current.isCompleted);
     _addresses[index] = updated;
     notifyListeners();
 
-    if (_activeRouteId == null) return;
+    if (_activeRouteId == null) {
+      _addresses[index] = current;
+      _errorMessage = 'Aktif rota bulunamadı, tamamlanma bilgisi kaydedilemedi.';
+      notifyListeners();
+      return false;
+    }
 
     try {
       final response = await http.patch(
@@ -336,18 +390,22 @@ class RouteProvider extends ChangeNotifier {
         ),
         headers: await AuthService.authHeaders(),
         body: jsonEncode({'completed': updated.isCompleted}),
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        _flagIfSessionError(response.body);
         _addresses[index] = current;
         _errorMessage =
             'Tamamlandı bilgisi kaydedilemedi: ${response.statusCode}';
         notifyListeners();
+        return false;
       }
+      return true;
     } catch (e) {
       _addresses[index] = current;
       _errorMessage = 'Tamamlandı bilgisi gönderilemedi: $e';
       notifyListeners();
+      return false;
     }
   }
 
@@ -368,9 +426,10 @@ class RouteProvider extends ChangeNotifier {
         ),
         headers: await AuthService.authHeaders(),
         body: jsonEncode({'note': note}),
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        _flagIfSessionError(response.body);
         _addresses[index] = current;
         _errorMessage = 'Not kaydedilemedi: ${response.statusCode}';
         notifyListeners();
@@ -396,9 +455,10 @@ class RouteProvider extends ChangeNotifier {
       final response = await http.patch(
         Uri.parse('$_baseUrl/routes/$_activeRouteId/complete'),
         headers: await AuthService.authHeaders(),
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        _flagIfSessionError(response.body);
         _routeStatus = previousStatus;
         _errorMessage = 'Rota tamamlanamadı: ${response.statusCode}';
         notifyListeners();
@@ -469,9 +529,10 @@ class RouteProvider extends ChangeNotifier {
                   })
               .toList(),
         }),
-      );
+      ).timeout(const Duration(seconds: 20));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        _flagIfSessionError(response.body);
         _optimizeError = 'Rota optimize edilemedi: ${response.statusCode}';
         return false;
       }

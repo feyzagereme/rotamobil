@@ -2,8 +2,6 @@
 
 **Son güncelleme tarihi:** 9 Ağustos 2026
 
-> ⚠️ **Önemli not:** Bu metin, App Store / Play Store başvurusu için makul bir başlangıç taslağı olarak hazırlanmıştır. Sağlık kurumu bağlamında çalıştığı ve sürücü konum takibi içerdiği için, gerçek/canlı kullanıma geçmeden önce bir avukat veya KVKK danışmanı tarafından gözden geçirilmesi önerilir. Köşeli parantez içindeki `[...]` alanlar mutlaka doldurulmalıdır.
-
 ---
 
 ## 1. Veri Sorumlusu
@@ -64,7 +62,8 @@ Misafir kullanıcılar için kişisel veri işlenmesi, uygulamanın temel işlev
 
 - **Mobil uygulama (kurumsal personel girişi):** Hesap, rota ve konum verileri, uygulamamızın çalıştırdığı bir sunucu üzerinden işlenir; bu sunucu Render (Render Services, Inc., ABD merkezli) bulut altyapısında barındırılır, veritabanı ise Neon (Neon, Inc., ABD merkezli) tarafından sağlanan bulut tabanlı bir PostgreSQL veritabanıdır. Bu nedenle kurumsal hesap verileri **yurt dışına aktarılmaktadır**. Sunucu ile uygulama arasındaki iletişim HTTPS ile şifrelenir.
 - **Web/masaüstü istemcisi (kurum içi kullanım):** Kurumun kendi bilgisayarında/ağında yerel bir arayüz olarak çalışır; şu an mobil uygulamayla aynı bulut sunucusuna bağlanmaktadır. Hastane içi tamamen yerel bir sunucu/veritabanı ve bulutla senkronizasyon mimarisi planlanmakta olup henüz devreye alınmamıştır; bu mimari tamamlandığında bu politika güncellenecektir.
-- Misafir modunda rota hesaplaması için durak koordinatları, kimlikle ilişkilendirilmeden TomTom (TomTom International B.V.) rota hesaplama servisine iletilir.
+- Rota hesaplaması/haritada gerçek yol geometrisinin çizilmesi için durak koordinatları, kimlikle ilişkilendirilmeden TomTom (TomTom International B.V.) rota hesaplama servisine iletilir. Bu, hem misafir modunda hem kurumsal personel girişinde (atanmış rotanın haritada gösterilmesi sırasında) geçerlidir.
+- Kurumsal panelden (yönetici/dispatcher tarafından) rota optimizasyonu istendiğinde, durak koordinatları kimlikle ilişkilendirilmeden Google Maps Platform (Distance Matrix API, Google LLC, ABD merkezli — yurt dışı veri aktarımı kapsamında değerlendirilir) servisine iletilir.
 - Push bildirimler için cihaz token'ı Google Firebase Cloud Messaging altyapısına iletilir (Google LLC, ABD merkezli — yurt dışı veri aktarımı kapsamında değerlendirilir).
 - Hata/performans izleme için teknik hata kayıtları Sentry (Functional Software, Inc., ABD merkezli) altyapısına iletilebilir.
 - Veriler, kanunen yetkili kamu kurum ve kuruluşları haricinde üçüncü taraflarla **pazarlama, reklam veya başka bir ticari amaçla paylaşılmaz, satılmaz.**

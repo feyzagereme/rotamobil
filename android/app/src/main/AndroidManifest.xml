@@ -2,6 +2,10 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Android 13+ (API 33) itibarıyla bildirim gösterebilmek için gerekli;
+         firebase_messaging bunu genelde manifest merge ile kendi ekler ama
+         açıkça belirtmek Play Console incelemesinde belirsizliği kaldırır. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:label="Rota360"
         android:name="${applicationName}"

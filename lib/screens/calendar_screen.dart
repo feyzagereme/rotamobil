@@ -1,6 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
+import '../services/auth_service.dart';
 import '../services/route_provider.dart';
 import '../models/address_model.dart';
 import '../theme/app_colors.dart';
@@ -16,12 +21,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
   late DateTime _currentWeekStart;
   late DateTime _selectedDay;
 
+  // Geçmiş/gelecek tarih rotaları
+  List<dynamic> _historyRoutes = [];
+  bool _isLoadingHistory = false;
+  String? _historyError;
+
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
     _currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
     _selectedDay = now;
+    _fetchHistory();
   }
 
   bool _isSameDay(DateTime a, DateTime b) =>
@@ -29,13 +40,78 @@ class _CalendarScreenState extends State<CalendarScreen> {
   bool _isToday(DateTime d) => _isSameDay(d, DateTime.now());
   bool get _isSelectedToday => _isSameDay(_selectedDay, DateTime.now());
 
+  Future<void> _fetchHistory() async {
+    setState(() { _isLoadingHistory = true; _historyError = null; });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('user_id');
+      if (userId == null) {
+        if (mounted) setState(() => _isLoadingHistory = false);
+        return;
+      }
+      final response = await http.get(
+        Uri.parse('${AppConfig.backendBaseUrl}/routes/$userId'),
+        headers: await AuthService.authHeaders(),
+      ).timeout(const Duration(seconds: 10));
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        setState(() {
+          _historyRoutes = jsonDecode(response.body) as List<dynamic>;
+          _isLoadingHistory = false;
+        });
+      } else {
+        setState(() { _isLoadingHistory = false; _historyError = 'Geçmiş rotalar alınamadı (${response.statusCode})'; });
+      }
+    } catch (_) {
+      if (mounted) setState(() { _isLoadingHistory = false; _historyError = 'Sunucuya bağlanılamadı'; });
+    }
+  }
+
+  /// Seçili güne ait rotanın duraklarını döner.
+  List<Address> _addressesForDay(DateTime day) {
+    for (final route in _historyRoutes) {
+      final createdRaw = route['created_at'];
+      if (createdRaw == null) continue;
+      final dt = DateTime.tryParse(createdRaw.toString());
+      if (dt == null) continue;
+      if (dt.year != day.year || dt.month != day.month || dt.day != day.day) continue;
+
+      final routeJson = (route['route_json'] as Map?)?.cast<String, dynamic>() ?? {};
+      final stopsRaw = routeJson['stops'] ?? routeJson['addresses'];
+      if (stopsRaw is! List) return [];
+      return stopsRaw
+          .whereType<Map>()
+          .map((item) => item.cast<String, dynamic>())
+          .toList()
+          .asMap()
+          .entries
+          .map((e) => Address.fromRouteStop(e.value, fallbackOrder: e.key + 1))
+          .where((a) => a.latitude != 0 && a.longitude != 0)
+          .toList()
+        ..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
+    }
+    return [];
+  }
+
+  /// O güne ait herhangi bir rota var mı? (takvimde nokta göstermek için)
+  bool _hasRouteForDay(DateTime day) {
+    if (_isSameDay(day, DateTime.now())) return true; // bugün için provider'dan bakılır
+    for (final route in _historyRoutes) {
+      final dt = DateTime.tryParse((route['created_at'] ?? '').toString());
+      if (dt != null && _isSameDay(dt, day)) return true;
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final weekDays = List.generate(7, (i) => _currentWeekStart.add(Duration(days: i)));
 
     return Consumer<RouteProvider>(
       builder: (context, provider, _) {
-        final addresses = _isSelectedToday ? provider.addresses : <Address>[];
+        final addresses = _isSelectedToday
+            ? provider.addresses
+            : _addressesForDay(_selectedDay);
         final completed = addresses.where((a) => a.isCompleted).length;
         final total = addresses.length;
 
@@ -91,7 +167,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 color: Colors.white, letterSpacing: -0.5)),
                         const SizedBox(height: 20),
 
-                        // ── Haftalık seçici — kapsül tasarımı
+                        // ── Haftalık seçici
                         SizedBox(
                           height: 70,
                           child: ListView.builder(
@@ -101,6 +177,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               final day = weekDays[i];
                               final isSelected = _isSameDay(day, _selectedDay);
                               final isToday = _isToday(day);
+                              final hasRoute = _hasRouteForDay(day);
 
                               return GestureDetector(
                                 onTap: () => setState(() => _selectedDay = day),
@@ -109,7 +186,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   width: 42,
                                   margin: const EdgeInsets.only(right: 8),
                                   decoration: BoxDecoration(
-                                    // Seçili: parlak kapsül
                                     color: isSelected
                                         ? Colors.white.withValues(alpha: 0.15)
                                         : Colors.transparent,
@@ -120,13 +196,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                             width: 1.5)
                                         : null,
                                     boxShadow: isSelected
-                                        ? [
-                                            BoxShadow(
-                                              color: const Color(0xFF53D6FF).withValues(alpha: 0.3),
-                                              blurRadius: 12,
-                                              spreadRadius: -2,
-                                            )
-                                          ]
+                                        ? [BoxShadow(
+                                            color: const Color(0xFF53D6FF).withValues(alpha: 0.3),
+                                            blurRadius: 12, spreadRadius: -2,
+                                          )]
                                         : null,
                                   ),
                                   child: Column(
@@ -135,8 +208,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                       Text(
                                         DateFormat('E', 'tr_TR').format(day).substring(0, 2).toUpperCase(),
                                         style: TextStyle(
-                                          fontSize: 10, fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.5,
+                                          fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.5,
                                           color: isSelected
                                               ? const Color(0xFF53D6FF)
                                               : Colors.white.withValues(alpha: 0.4),
@@ -154,12 +226,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                                   : Colors.white.withValues(alpha: 0.5),
                                         ),
                                       ),
-                                      if (isToday)
+                                      // Bugün noktası VEYA o günde rota varsa renkli nokta
+                                      if (isToday || hasRoute)
                                         Container(
                                           width: 4, height: 4,
                                           margin: const EdgeInsets.only(top: 3),
                                           decoration: BoxDecoration(
-                                            color: isSelected ? const Color(0xFF53D6FF) : const Color(0xFF53D6FF),
+                                            color: isToday
+                                                ? const Color(0xFF53D6FF)
+                                                : AppColors.success,
                                             shape: BoxShape.circle,
                                           ),
                                         ),
@@ -199,38 +274,52 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   style: const TextStyle(fontSize: 18,
                                       fontWeight: FontWeight.w800, color: AppColors.textDark)),
                             ]),
-                            if (_isSelectedToday)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: AppColors.success.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                            Row(children: [
+                              if (_isSelectedToday)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.success.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                                  ),
+                                  child: const Text('Bugün',
+                                      style: TextStyle(fontSize: 12,
+                                          color: AppColors.success, fontWeight: FontWeight.w600)),
                                 ),
-                                child: const Text('Bugün',
-                                    style: TextStyle(fontSize: 12,
-                                        color: AppColors.success, fontWeight: FontWeight.w600)),
-                              ),
+                              if (_isLoadingHistory) ...[
+                                const SizedBox(width: 8),
+                                const SizedBox(
+                                  width: 14, height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
+                                ),
+                              ],
+                              if (_historyError != null && !_isSelectedToday) ...[
+                                const SizedBox(width: 8),
+                                GestureDetector(
+                                  onTap: _fetchHistory,
+                                  child: const Icon(Icons.refresh_rounded, size: 18, color: AppColors.error),
+                                ),
+                              ],
+                            ]),
                           ],
                         ),
 
-                        if (_isSelectedToday) ...[
+                        // ── İlerleme kartı (hem bugün hem geçmiş tarihler için)
+                        if (total > 0) ...[
                           const SizedBox(height: 16),
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
                                 colors: [Color(0xFF0A1628), Color(0xFF0D47A1)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
+                                begin: Alignment.topLeft, end: Alignment.bottomRight,
                               ),
                               borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF0D47A1).withValues(alpha: 0.3),
-                                  blurRadius: 16, offset: const Offset(0, 6),
-                                ),
-                              ],
+                              boxShadow: [BoxShadow(
+                                color: const Color(0xFF0D47A1).withValues(alpha: 0.3),
+                                blurRadius: 16, offset: const Offset(0, 6),
+                              )],
                             ),
                             child: Column(children: [
                               Row(
@@ -261,12 +350,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             ]),
                           ),
                           const SizedBox(height: 20),
-                          Text('GÜNÜN ROTASI',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-                                  color: AppColors.textLight.withValues(alpha: 0.8),
-                                  letterSpacing: 1.2)),
+                          Text(
+                            _isSelectedToday ? 'GÜNÜN ROTASI' : 'O GÜNÜN ROTASI',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                                color: AppColors.textLight.withValues(alpha: 0.8),
+                                letterSpacing: 1.2),
+                          ),
                           const SizedBox(height: 10),
-                          ...addresses.asMap().entries.map((e) => _addressItem(context, e.key, e.value)),
+                          ...addresses.asMap().entries.map((e) =>
+                              _addressItem(context, e.key, e.value, readOnly: !_isSelectedToday)),
+
+                        ] else if (_isLoadingHistory && !_isSelectedToday) ...[
+                          const SizedBox(height: 48),
+                          const Center(
+                            child: CircularProgressIndicator(color: AppColors.accent),
+                          ),
                         ] else ...[
                           const SizedBox(height: 48),
                           Center(
@@ -302,22 +400,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _addressItem(BuildContext context, int index, Address address) {
+  Widget _addressItem(BuildContext context, int index, Address address, {bool readOnly = false}) {
     final isCompleted = address.isCompleted;
     return GestureDetector(
-      onTap: () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => AddressDetailScreen(address: address, index: index))),
+      onTap: readOnly
+          ? null // Geçmiş rota detayına giremez (index artık geçersiz olabilir)
+          : () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => AddressDetailScreen(address: address, index: index))),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.85),
+          color: readOnly
+              ? Colors.white.withValues(alpha: 0.6)
+              : Colors.white.withValues(alpha: 0.85),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 6, offset: const Offset(0, 2)),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6, offset: const Offset(0, 2))],
         ),
         child: Row(
           children: [
@@ -347,7 +447,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 Text(address.customerName,
                     style: TextStyle(
                       fontSize: 13, fontWeight: FontWeight.w700,
-                      color: isCompleted ? AppColors.textLight : AppColors.textDark,
+                      color: isCompleted || readOnly ? AppColors.textLight : AppColors.textDark,
                       decoration: isCompleted ? TextDecoration.lineThrough : null,
                     )),
                 const SizedBox(height: 3),
@@ -356,7 +456,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     maxLines: 1, overflow: TextOverflow.ellipsis),
               ]),
             ),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.textLight, size: 18),
+            if (!readOnly)
+              const Icon(Icons.chevron_right_rounded, color: AppColors.textLight, size: 18),
           ],
         ),
       ),

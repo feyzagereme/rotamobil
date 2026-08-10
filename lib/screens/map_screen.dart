@@ -30,6 +30,7 @@ class _MapScreenState extends State<MapScreen> {
   final _searchController = TextEditingController();
   List<Map<String, dynamic>> _searchResults = [];
   bool _isSearching = false;
+  bool _isAddingToRoute = false;
 
   @override
   void initState() {
@@ -189,31 +190,45 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  void _addPendingToRoute(RouteProvider provider) {
-    if (_pendingPin == null) return;
+  Future<void> _addPendingToRoute(RouteProvider provider) async {
+    if (_pendingPin == null || _isAddingToRoute) return;
+    final pin = _pendingPin!;
+    final addressText = _pendingAddressText;
+    final orderNumber = provider.addresses.length + 1;
+
     final newAddress = Address(
-      id: provider.addresses.length + 100,
-      orderNumber: provider.addresses.length + 1,
-      street: _pendingAddressText ?? 'Yeni Adres',
+      id: 0, // Backend tarafından atanacak gerçek ID
+      orderNumber: orderNumber,
+      street: addressText ?? 'Yeni Adres',
       district: '',
-      city: 'İzmir',
+      city: '',
       postalCode: '',
       country: 'Türkiye',
-      latitude: _pendingPin!.latitude,
-      longitude: _pendingPin!.longitude,
-      customerName: 'Yeni Durak ${provider.addresses.length + 1}',
+      latitude: pin.latitude,
+      longitude: pin.longitude,
+      customerName: 'Yeni Durak $orderNumber',
       customerType: 'Müşteri',
     );
-    provider.addAddress(newAddress);
-    setState(() { _pendingPin = null; _pendingAddressText = null; });
+
+    setState(() {
+      _pendingPin = null;
+      _pendingAddressText = null;
+      _isAddingToRoute = true;
+    });
+
+    final error = await provider.addAddressAndPersist(newAddress);
+
+    if (!mounted) return;
+    setState(() => _isAddingToRoute = false);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Adres rotaya eklendi'),
-        backgroundColor: AppColors.success,
+        content: Text(error ?? 'Adres rotaya eklendi'),
+        backgroundColor: error != null ? AppColors.error : AppColors.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         margin: const EdgeInsets.all(12),
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -669,9 +684,16 @@ class _MapScreenState extends State<MapScreen> {
             Expanded(
               flex: 2,
               child: ElevatedButton.icon(
-                onPressed: _isGeocoding ? null : () => _addPendingToRoute(provider),
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Rotaya Ekle'),
+                onPressed: (_isGeocoding || _isAddingToRoute)
+                    ? null
+                    : () => _addPendingToRoute(provider),
+                icon: _isAddingToRoute
+                    ? const SizedBox(
+                        width: 16, height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.add_rounded, size: 18),
+                label: Text(_isAddingToRoute ? 'Ekleniyor...' : 'Rotaya Ekle'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryDark,
                   foregroundColor: Colors.white,
