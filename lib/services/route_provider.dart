@@ -231,16 +231,87 @@ class RouteProvider extends ChangeNotifier {
 
   Future<void> refresh() => loadActiveRoute();
 
-  void reorder(int oldIndex, int newIndex) {
+  Future<void> reorder(int oldIndex, int newIndex) async {
     if (newIndex > oldIndex) newIndex--;
+    final previous = List<Address>.from(_addresses);
     final item = _addresses.removeAt(oldIndex);
     _addresses.insert(newIndex, item);
     notifyListeners();
+
+    if (_activeRouteId == null) return;
+
+    try {
+      final response = await http.patch(
+        Uri.parse('$_baseUrl/routes/$_activeRouteId/stops'),
+        headers: await AuthService.authHeaders(),
+        body: jsonEncode({
+          'stops': _addresses
+              .asMap()
+              .entries
+              .map((e) => {'id': e.value.id, 'order': e.key + 1})
+              .toList(),
+        }),
+      );
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        _addresses = previous;
+        _errorMessage = 'Durak sırası kaydedilemedi: ${response.statusCode}';
+        notifyListeners();
+      }
+    } catch (e) {
+      _addresses = previous;
+      _errorMessage = 'Durak sırası gönderilemedi: $e';
+      notifyListeners();
+    }
   }
 
-  void addAddress(Address address) {
+  Future<void> addAddress(Address address) async {
     _addresses.add(address);
     notifyListeners();
+
+    if (_activeRouteId == null) return;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/routes/$_activeRouteId/stops'),
+        headers: await AuthService.authHeaders(),
+        body: jsonEncode({
+          'stop': {
+            'street': address.street,
+            'district': address.district,
+            'city': address.city,
+            'postalCode': address.postalCode,
+            'latitude': address.latitude,
+            'longitude': address.longitude,
+            'customerName': address.customerName,
+            'customerType': address.customerType,
+          },
+        }),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+        final savedStop = decoded['stop'] as Map<String, dynamic>?;
+        if (savedStop != null) {
+          final index = _addresses.indexOf(address);
+          if (index != -1) {
+            _addresses[index] = Address.fromRouteStop(
+              savedStop,
+              fallbackOrder: address.orderNumber,
+            );
+            notifyListeners();
+          }
+        }
+      } else {
+        _addresses.remove(address);
+        _errorMessage = 'Durak kaydedilemedi: ${response.statusCode}';
+        notifyListeners();
+      }
+    } catch (e) {
+      _addresses.remove(address);
+      _errorMessage = 'Durak gönderilemedi: $e';
+      notifyListeners();
+    }
   }
 
   void removeAddress(int index) {
