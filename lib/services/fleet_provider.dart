@@ -90,6 +90,7 @@ class FleetProvider extends ChangeNotifier {
     _vehicleId = vehicleId;
     _workspace = null;
     _updatedAt = null;
+    _syncFailed = false;
 
     notifyListeners();
 
@@ -115,6 +116,21 @@ class FleetProvider extends ChangeNotifier {
         headers: await AuthService.authHeaders(),
       );
 
+      // 404: dispatcher web'den henüz hiç filo verisi kaydetmemiş — bu
+      // gerçek bir senkronizasyon hatası değil, normal bir "veri yok"
+      // durumu (bkz. server.js GET /fleet/:user_id). route_provider.dart
+      // 404'ü aynı şekilde ayrı ele alıyor; burada da _syncFailed hiç
+      // set edilmemeli, aksi halde sürücü ilk kurulumda kalıcı bir
+      // "bağlantı yok" ikonu görür ve zamanla gerçek hataları da görmezden
+      // gelmeye başlar.
+      if (response.statusCode == 404) {
+        _workspace = null;
+        _syncFailed = false;
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
       if (response.statusCode < 200 || response.statusCode >= 300) {
         _syncFailed = true;
         _isLoading = false;
@@ -127,8 +143,10 @@ class FleetProvider extends ChangeNotifier {
       final vehiclesRaw = decoded['vehicles'];
 
       if (vehiclesRaw is! Map) {
+        // "vehicles" alanı yoksa/null ise de aynı şekilde henüz veri
+        // girilmemiş demektir, hata değil.
         _workspace = null;
-        _syncFailed = true;
+        _syncFailed = false;
         _isLoading = false;
         notifyListeners();
         return;
