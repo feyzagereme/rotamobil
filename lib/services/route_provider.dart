@@ -14,7 +14,6 @@ import '../config/app_config.dart';
 class RouteProvider extends ChangeNotifier {
   static const String _baseUrl = AppConfig.backendBaseUrl;
   static const String _cacheKeyRoute = 'cached_route_json';
-  static const String _cacheKeyVehicleId = 'cached_route_vehicle_id';
 
   List<Address> _addresses = [];
   String? _activeRouteId;
@@ -23,7 +22,6 @@ class RouteProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   Timer? _syncTimer;
-  int? _vehicleId;
 
   // Ağ bağlantısı olmadığında, cihazda daha önce kaydedilmiş son rota
   // gösteriliyorsa true olur. Kullanıcıya "çevrimdışı, eski veri" bilgisi
@@ -69,19 +67,8 @@ class RouteProvider extends ChangeNotifier {
   String? get activeRouteName => _activeRouteName;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  int? get vehicleId => _vehicleId;
   bool get isOffline => _isOffline;
   DateTime? get cachedAt => _cachedAt;
-
-  Future<void> switchVehicle(int vehicleId) async {
-    if (_vehicleId == vehicleId) return;
-    _vehicleId = vehicleId;
-    _addresses = [];
-    _activeRouteId = null;
-    _activeRouteName = null;
-    notifyListeners();
-    await loadActiveRoute();
-  }
 
   bool get isOptimizing => _isOptimizing;
   String? get optimizeError => _optimizeError;
@@ -166,9 +153,7 @@ class RouteProvider extends ChangeNotifier {
     }
 
     try {
-      final Uri uri = _vehicleId != null
-          ? Uri.parse('$_baseUrl/vehicles/$_vehicleId/active-route')
-          : Uri.parse('$_baseUrl/routes/$userId/active');
+      final Uri uri = Uri.parse('$_baseUrl/routes/$userId/active');
      final response = await http
           .get(uri, headers: await AuthService.authHeaders())
           .timeout(const Duration(seconds: 10));
@@ -206,21 +191,12 @@ class RouteProvider extends ChangeNotifier {
         '${_cacheKeyRoute}_time',
         _cachedAt!.toIso8601String(),
       );
-      if (_vehicleId != null) {
-        await prefs.setInt(_cacheKeyVehicleId, _vehicleId!);
-      } else {
-        await prefs.remove(_cacheKeyVehicleId);
-      }
     } catch (e) {
       // Ağ hatası: cihazda daha önce kaydedilmiş bir rota varsa onu göster,
       // kullanıcı tamamen boş bir ekranla karşılaşmasın.
       final cachedJson = prefs.getString(_cacheKeyRoute);
-      final cachedVehicleId = prefs.getInt(_cacheKeyVehicleId);
-      final sameVehicle = _vehicleId == null
-          ? cachedVehicleId == null
-          : cachedVehicleId == _vehicleId;
 
-      if (cachedJson != null && sameVehicle) {
+      if (cachedJson != null) {
         try {
           final decoded = jsonDecode(cachedJson) as Map<String, dynamic>;
           _applyRouteData(decoded);

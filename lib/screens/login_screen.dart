@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
-import 'package:provider/provider.dart';
-import '../services/vehicle_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -45,12 +42,6 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (error == null) {
-      final prefs = await SharedPreferences.getInstance();
-      final assignedVehicleId = prefs.getInt('assigned_vehicle_id');
-      if (assignedVehicleId != null && mounted) {
-        await context.read<VehicleProvider>().select(assignedVehicleId);
-      }
-      if (!mounted) return;
       Navigator.of(context).pushReplacementNamed('/home');
     } else {
       setState(() {

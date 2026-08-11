@@ -15,12 +15,10 @@ import 'screens/guest/guest_app.dart';
 import 'services/auth_service.dart';
 import 'services/route_provider.dart';
 import 'services/location_service.dart';
-import 'services/vehicle_provider.dart';
 import 'services/fleet_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'services/notification_service.dart';
 import 'theme/app_colors.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,20 +44,10 @@ void main() async {
   await initializeDateFormatting('tr_TR');
   final loggedIn = await AuthService.isLoggedIn();
 
-  // assigned_vehicle_id'i burada senkron okuyoruz; VehicleProvider'a
-  // ilk değer olarak veriyoruz. Böylece _handleVehicleChange()'in
-  // async _restore()'dan önce ateşlenmesi durumunda bile doğru araç
-  // yüklenir (ör. ilk oturum açılışında selected_vehicle_id henüz yok).
-  final startPrefs = await SharedPreferences.getInstance();
-  final assignedVehicleId = startPrefs.getInt('assigned_vehicle_id');
-
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => RouteProvider()),
-        ChangeNotifierProvider(
-          create: (_) => VehicleProvider(initialVehicleId: assignedVehicleId),
-        ),
         ChangeNotifierProvider(create: (_) => FleetProvider()),
       ],
       child: RotaMobilApp(startLoggedIn: loggedIn),
@@ -148,18 +136,13 @@ class _MainAppState extends State<MainApp> {
     LocationService.startTrackingIfEnabled();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<VehicleProvider>().addListener(_handleVehicleChange);
       context.read<RouteProvider>().addListener(_handleSessionExpiry);
-      _handleVehicleChange();
+      // RouteProvider kendi constructor'ında hemen yükleniyor;
+      // FleetProvider ise otomatik senkronizasyonu 10sn'lik periyodik
+      // zamanlayıcıyla başlatıyor — ilk verinin hemen görünmesi için
+      // burada bir kez elle tetikleniyor.
+      context.read<FleetProvider>().load();
     });
-  }
-
-  // VehicleProvider (araç seçici) değiştiğinde RouteProvider ve FleetProvider'ı
-  // seçilen araca göre senkron tutar.
-  void _handleVehicleChange() {
-    final vehicleId = context.read<VehicleProvider>().selectedVehicleId;
-    context.read<RouteProvider>().switchVehicle(vehicleId);
-    context.read<FleetProvider>().switchVehicle(vehicleId);
   }
 
   // Backend 401/403 döndüğünde (token süresi dolmuş/iptal edilmiş) oturumu
@@ -183,7 +166,6 @@ class _MainAppState extends State<MainApp> {
   @override
   void dispose() {
     LocationService.stopTracking();
-    context.read<VehicleProvider>().removeListener(_handleVehicleChange);
     context.read<RouteProvider>().removeListener(_handleSessionExpiry);
     super.dispose();
   }

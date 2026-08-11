@@ -20,7 +20,6 @@ import 'auth_service.dart';
 class FleetProvider extends ChangeNotifier {
   static const String _baseUrl = AppConfig.backendBaseUrl;
 
-  int? _vehicleId;
   Map<String, dynamic>? _workspace;
   DateTime? _updatedAt;
 
@@ -81,24 +80,8 @@ class FleetProvider extends ChangeNotifier {
     return {};
   }
 
-  Future<void> switchVehicle(int vehicleId) async {
-    if (_vehicleId == vehicleId) {
-      await load();
-      return;
-    }
-
-    _vehicleId = vehicleId;
-    _workspace = null;
-    _updatedAt = null;
-    _syncFailed = false;
-
-    notifyListeners();
-
-    await load();
-  }
-
   Future<void> load() async {
-    if (_vehicleId == null || _isLoading) return;
+    if (_isLoading) return;
 
     _isLoading = true;
 
@@ -116,7 +99,7 @@ class FleetProvider extends ChangeNotifier {
         headers: await AuthService.authHeaders(),
       );
 
-      // 404: dispatcher web'den henüz hiç filo verisi kaydetmemiş — bu
+      // 404: admin web'den henüz hiç çalışma alanı kaydetmemiş — bu
       // gerçek bir senkronizasyon hatası değil, normal bir "veri yok"
       // durumu (bkz. server.js GET /fleet/:user_id). route_provider.dart
       // 404'ü aynı şekilde ayrı ele alıyor; burada da _syncFailed hiç
@@ -140,27 +123,13 @@ class FleetProvider extends ChangeNotifier {
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
 
-      final vehiclesRaw = decoded['vehicles'];
+      final workspaceRaw = decoded['workspace'];
 
-      if (vehiclesRaw is! Map) {
-        // "vehicles" alanı yoksa/null ise de aynı şekilde henüz veri
-        // girilmemiş demektir, hata değil.
-        _workspace = null;
-        _syncFailed = false;
-        _isLoading = false;
-        notifyListeners();
-        return;
-      }
-
-      final vehicles = Map<String, dynamic>.from(vehiclesRaw);
-
-      final vehicleRaw = vehicles[_vehicleId.toString()];
-
-      if (vehicleRaw is Map) {
-        // Web tarafı workspace alanı oluşturmuyor.
-        // Araç verisinin kendisi doğrudan workspace.
-        _workspace = Map<String, dynamic>.from(vehicleRaw);
+      if (workspaceRaw is Map) {
+        _workspace = Map<String, dynamic>.from(workspaceRaw);
       } else {
+        // "workspace" alanı yoksa/null ise henüz veri girilmemiş demektir,
+        // hata değil.
         _workspace = null;
       }
 

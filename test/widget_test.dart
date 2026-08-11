@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 
 import 'package:rotamobil/main.dart';
 import 'package:rotamobil/services/route_provider.dart';
-import 'package:rotamobil/services/vehicle_provider.dart';
 import 'package:rotamobil/services/fleet_provider.dart';
 
 void main() {
@@ -15,7 +14,6 @@ void main() {
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => RouteProvider()),
-          ChangeNotifierProvider(create: (_) => VehicleProvider()),
           ChangeNotifierProvider(create: (_) => FleetProvider()),
         ],
         child: const RotaMobilApp(startLoggedIn: false),

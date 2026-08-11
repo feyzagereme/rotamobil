@@ -36,16 +36,6 @@ class AuthService {
           );
         }
 
-        final vehicleId = body["vehicle_id"];
-        if (vehicleId != null) {
-          await prefs.setInt(
-            "assigned_vehicle_id",
-            vehicleId is int ? vehicleId : int.parse(vehicleId.toString()),
-          );
-        } else {
-          await prefs.remove("assigned_vehicle_id");
-        }
-
         final authToken = body["token"];
         if (authToken != null) {
           await prefs.setString("auth_token", authToken.toString());
@@ -75,8 +65,6 @@ class AuthService {
     await prefs.remove(_keyUsername);
     await prefs.remove("user_id");
     await prefs.remove("auth_token");
-    await prefs.remove("assigned_vehicle_id");
-    await prefs.remove("selected_vehicle_id"); // Paylaşımlı cihazda bir sonraki sürücüye sızmayı önler
   }
 
   /// Uygulama açılışında oturum açık mı kontrol eder.
