@@ -42,7 +42,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (error == null) {
-      Navigator.of(context).pushReplacementNamed('/home');
+      final role = await AuthService.getRole();
+      if (!mounted) return;
+      Navigator.of(context)
+          .pushReplacementNamed(role == 'admin' ? '/admin' : '/home');
     } else {
       setState(() {
         _loading = false;

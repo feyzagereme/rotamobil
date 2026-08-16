@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'screens/calendar_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/guest/guest_app.dart';
+import 'screens/admin_overview_screen.dart';
 import 'services/auth_service.dart';
 import 'services/route_provider.dart';
 import 'services/location_service.dart';
@@ -107,6 +108,7 @@ class RotaMobilApp extends StatelessWidget {
   '/register': (_) => const RegisterScreen(),
   '/home': (_) => const MainApp(),
   '/guest': (_) => const GuestApp(),
+  '/admin': (_) => const AdminOverviewScreen(),
 },
     );
   }

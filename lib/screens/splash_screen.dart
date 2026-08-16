@@ -47,7 +47,14 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
     final loggedIn = await AuthService.isLoggedIn();
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed(loggedIn ? '/home' : '/welcome');
+    if (!loggedIn) {
+      Navigator.of(context).pushReplacementNamed('/welcome');
+      return;
+    }
+    final role = await AuthService.getRole();
+    if (!mounted) return;
+    Navigator.of(context)
+        .pushReplacementNamed(role == 'admin' ? '/admin' : '/home');
   }
 
   @override

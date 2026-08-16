@@ -8,6 +8,7 @@ class AuthService {
   static const String baseUrl = AppConfig.backendBaseUrl;
   static const String _keyLoggedIn = 'is_logged_in';
   static const String _keyUsername = 'username';
+  static const String _keyRole = 'role';
 
   /// Giriş yapar. Hata varsa hata mesajı döner, başarılıysa null döner.
   static Future<String?> login(String username, String password) async {
@@ -22,11 +23,13 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final role = body["role"] as String?;
-        if (role != null && role != "driver") {
-          return 'Bu hesap sürücü hesabı değil, mobil uygulamaya giriş yapamaz.';
+        if (role != null && role != "driver" && role != "admin") {
+          return 'Bu hesap sürücü ya da yönetici hesabı değil, mobil '
+              'uygulamaya giriş yapamaz.';
         }
 
         final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_keyRole, role ?? "driver");
 
         final userId = body["user_id"];
         if (userId != null) {
@@ -63,8 +66,16 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyLoggedIn);
     await prefs.remove(_keyUsername);
+    await prefs.remove(_keyRole);
     await prefs.remove("user_id");
     await prefs.remove("auth_token");
+  }
+
+  /// Giriş yapan hesabın rolü ("driver" ya da "admin"). Bilinmiyorsa
+  /// (ör. eski bir oturumdan kalan veri) güvenli varsayılan "driver"dır.
+  static Future<String> getRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyRole) ?? 'driver';
   }
 
   /// Uygulama açılışında oturum açık mı kontrol eder.
