@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
+import 'admin_driver_detail_screen.dart';
 
 class _DriverSummary {
   const _DriverSummary({
@@ -127,10 +128,7 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: _buildBody(),
-      ),
+      body: RefreshIndicator(onRefresh: _load, child: _buildBody()),
     );
   }
 
@@ -145,7 +143,10 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
           Icon(Icons.wifi_off_rounded, size: 40, color: AppColors.textLight),
           const SizedBox(height: 12),
           Center(
-            child: Text(_error!, style: const TextStyle(color: AppColors.textMid)),
+            child: Text(
+              _error!,
+              style: const TextStyle(color: AppColors.textMid),
+            ),
           ),
         ],
       );
@@ -156,8 +157,10 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
         children: const [
           SizedBox(height: 120),
           Center(
-            child: Text('Kayıtlı sürücü yok.',
-                style: TextStyle(color: AppColors.textMid)),
+            child: Text(
+              'Kayıtlı sürücü yok.',
+              style: TextStyle(color: AppColors.textMid),
+            ),
           ),
         ],
       );
@@ -165,13 +168,25 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: drivers.length,
-      itemBuilder: (context, i) => _DriverSummaryCard(summary: drivers[i]),
+      itemBuilder: (context, i) => _DriverSummaryCard(
+        summary: drivers[i],
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AdminDriverDetailScreen(
+              userId: drivers[i].userId,
+              username: drivers[i].username,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
 class _DriverSummaryCard extends StatelessWidget {
-  const _DriverSummaryCard({required this.summary});
+  const _DriverSummaryCard({required this.summary, required this.onTap});
+
+  final VoidCallback onTap;
 
   final _DriverSummary summary;
 
@@ -182,76 +197,88 @@ class _DriverSummaryCard extends StatelessWidget {
     final progress = total == 0 ? 0.0 : completed / total;
     final noRoute = !summary.hasRouteToday || total == 0;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(AppTheme.borderRadiusLg),
-        border: Border.all(color: AppColors.stroke),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppTheme.borderRadiusLg),
+            border: Border.all(color: AppColors.stroke),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryDark.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.person_rounded,
-                    color: AppColors.primaryDark),
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryDark.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.person_rounded,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      summary.username,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                  ),
+                  if (!noRoute)
+                    Text(
+                      '$completed / $total',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  summary.username,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: AppColors.textDark,
+              const SizedBox(height: 12),
+              if (noRoute)
+                const Text(
+                  'Bugün için atanmış rota yok',
+                  style: TextStyle(color: AppColors.textLight, fontSize: 12.5),
+                )
+              else ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 8,
+                    backgroundColor: AppColors.stroke,
+                    valueColor: AlwaysStoppedAnimation(
+                      progress >= 1.0 ? AppColors.success : AppColors.accent,
+                    ),
                   ),
                 ),
-              ),
-              if (!noRoute)
+                const SizedBox(height: 8),
                 Text(
-                  '$completed / $total',
+                  '${summary.totalKm.toStringAsFixed(1)} km · ~${summary.totalMin} dk',
                   style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                    color: AppColors.primaryDark,
+                    color: AppColors.textMid,
+                    fontSize: 12,
                   ),
                 ),
+              ],
             ],
           ),
-          const SizedBox(height: 12),
-          if (noRoute)
-            const Text(
-              'Bugün için atanmış rota yok',
-              style: TextStyle(color: AppColors.textLight, fontSize: 12.5),
-            )
-          else ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 8,
-                backgroundColor: AppColors.stroke,
-                valueColor: AlwaysStoppedAnimation(
-                  progress >= 1.0 ? AppColors.success : AppColors.accent,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${summary.totalKm.toStringAsFixed(1)} km · ~${summary.totalMin} dk',
-              style: const TextStyle(color: AppColors.textMid, fontSize: 12),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
