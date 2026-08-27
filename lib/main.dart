@@ -121,7 +121,7 @@ class MainApp extends StatefulWidget {
   State<MainApp> createState() => _MainAppState();
 }
 
-class _MainAppState extends State<MainApp> {
+class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
@@ -135,6 +135,7 @@ class _MainAppState extends State<MainApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     LocationService.startTrackingIfEnabled();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -165,8 +166,20 @@ class _MainAppState extends State<MainApp> {
     });
   }
 
+  // Uygulama arka plandan ön plana dönünce günün rotasını tazele. Sürücü
+  // uygulamayı dün açıp bugün geri döndüğünde, backend artık İstanbul
+  // saatine göre "bugünün" rotasını servis ediyor — onu çekmek için
+  // yeniden yükle. (RouteProvider'ın periyodik yenilemesi yok.)
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      context.read<RouteProvider>().refresh();
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     LocationService.stopTracking();
     context.read<RouteProvider>().removeListener(_handleSessionExpiry);
     super.dispose();
