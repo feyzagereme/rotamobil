@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_notice.dart';
 
 /// Rota360 sürücü hesapları sistem yöneticisi tarafından oluşturulur.
 /// Bu ekran kullanıcıya o bilgiyi açıklar ve yöneticiyle iletişim kurmak
@@ -23,12 +24,9 @@ class RegisterScreen extends StatelessWidget {
       await launchUrl(uri);
     } else {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('E-posta uygulaması açılamadı. $_adminEmail adresine yazabilirsiniz.'),
-            backgroundColor: AppColors.primaryDark,
-            duration: Duration(seconds: 4),
-          ),
+        AppNotice.show(
+          context,
+          'E-posta uygulaması açılamadı. $_adminEmail adresine yazabilirsiniz.',
         );
       }
     }

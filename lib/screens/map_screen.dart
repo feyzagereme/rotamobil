@@ -9,6 +9,7 @@ import '../services/route_provider.dart';
 import '../services/tomtom_routing_service.dart';
 import '../models/address_model.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_notice.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -141,14 +142,10 @@ class _MapScreenState extends State<MapScreen> {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Google Maps açılamadı'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(12),
-          ),
+        AppNotice.show(
+          context,
+          'Google Maps açılamadı',
+          severity: AppNoticeSeverity.error,
         );
       }
     }
@@ -221,16 +218,20 @@ class _MapScreenState extends State<MapScreen> {
     if (!mounted) return;
     setState(() => _isAddingToRoute = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(error ?? 'Adres rotaya eklendi'),
-        backgroundColor: error != null ? AppColors.error : AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(12),
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    if (error != null) {
+      AppNotice.show(context, error, severity: AppNoticeSeverity.error);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Adres rotaya eklendi'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(12),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   @override

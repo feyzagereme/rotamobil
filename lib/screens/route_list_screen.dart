@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/route_provider.dart';
+import '../widgets/app_notice.dart';
 import 'address_detail_screen.dart';
 import '../models/address_model.dart';
 import '../theme/app_colors.dart';
@@ -317,15 +318,19 @@ class _RouteListScreenState extends State<RouteListScreen> {
                       onPressed: () async {
                         final ok = await context.read<RouteProvider>().completeRoute();
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              ok
-                                  ? 'Rota tamamlandı, iyi günler!'
-                                  : 'Rota tamamlanamadı, tekrar deneyin.',
+                        if (ok) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Rota tamamlandı, iyi günler!'),
                             ),
-                          ),
-                        );
+                          );
+                        } else {
+                          AppNotice.show(
+                            context,
+                            'Rota tamamlanamadı, tekrar deneyin.',
+                            severity: AppNoticeSeverity.error,
+                          );
+                        }
                       },
                       backgroundColor: AppColors.primary,
                       icon: const Icon(Icons.flag_rounded),
