@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/guest/guest_route_service.dart';
+import '../../widgets/app_notice.dart';
 
 class GuestFavoritesScreen extends StatefulWidget {
   const GuestFavoritesScreen({super.key});
@@ -26,13 +27,7 @@ class _GuestFavoritesScreenState extends State<GuestFavoritesScreen> {
     final exists = addresses.any((a) => a.id == address.id);
     if (exists) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: const Text('Bu durak zaten rotada'),
-          backgroundColor: const Color(0xFFF59E0B),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          margin: const EdgeInsets.all(12),
-        ));
+        AppNotice.show(context, 'Bu durak zaten rotada');
       }
       return;
     }

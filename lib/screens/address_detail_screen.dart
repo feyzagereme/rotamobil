@@ -8,6 +8,7 @@ import '../models/address_model.dart';
 import '../services/maps_launcher.dart';
 import '../services/route_provider.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_notice.dart';
 
 class AddressDetailScreen extends StatefulWidget {
   final Address address;
@@ -67,15 +68,10 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
     if (!success) {
       setState(() => _isCompleted = !target);
       final error = context.read<RouteProvider>().errorMessage;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error ?? 'Değişiklik kaydedilemedi, tekrar deneyin.'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          margin: const EdgeInsets.all(12),
-          duration: const Duration(seconds: 3),
-        ),
+      AppNotice.show(
+        context,
+        error ?? 'Değişiklik kaydedilemedi, tekrar deneyin.',
+        severity: AppNoticeSeverity.error,
       );
       return;
     }
@@ -226,7 +222,7 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    address.customerName,
+                                    address.displayName,
                                     style: const TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w800,

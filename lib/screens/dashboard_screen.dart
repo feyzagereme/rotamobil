@@ -204,7 +204,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(nextAddress.customerName,
+                                      Text(nextAddress.displayName,
                                           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                                       const SizedBox(height: 3),
                                       Text('${nextAddress.street}, ${nextAddress.district}',
@@ -332,7 +332,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(address.customerName,
+                                      Text(address.displayName,
                                           style: TextStyle(
                                             fontSize: 13, fontWeight: FontWeight.w600,
                                             color: address.isCompleted ? AppColors.textLight : AppColors.textDark,
