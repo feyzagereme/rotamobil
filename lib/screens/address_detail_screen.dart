@@ -228,7 +228,7 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    address.customerName,
+                                    address.displayName,
                                     style: const TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w800,

@@ -293,7 +293,7 @@ class _RouteListScreenState extends State<RouteListScreen> {
                         child: _AddressItem(
                           address: address,
                           index: index,
-                          onDelete: address.isReturnToBase
+                          onDelete: (address.isReturnToBase || address.isMiddayReturn)
                               ? () {}
                               : () => context.read<RouteProvider>().removeAddress(index),
                         ),
@@ -353,6 +353,12 @@ class _AddressItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCompleted = address.isCompleted;
+    // Sabah/öğle vardiyaları ayrı kapalı turlar; ortadaki "öğlen hastaneye
+    // dönüş" düğümü de son duraktaki hastane gibi gösterilir (elle tamamlanır,
+    // silinemez), sadece etiketi farklı.
+    final isHospitalStop = address.isReturnToBase || address.isMiddayReturn;
+    final hospitalLabel =
+        address.isMiddayReturn ? 'Hastaneye Dönüş (Öğle)' : 'Hastaneye Dönüş';
 
     if (address.isStartPoint) {
       return Container(
@@ -439,7 +445,7 @@ class _AddressItem extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      if (address.isReturnToBase) ...[
+                      if (isHospitalStop) ...[
                         Icon(Icons.local_hospital_rounded,
                             size: 14,
                             color: isCompleted ? AppColors.textLight : AppColors.primaryDark),
@@ -447,7 +453,7 @@ class _AddressItem extends StatelessWidget {
                       ],
                       Expanded(
                         child: Text(
-                          address.isReturnToBase ? 'Hastaneye Dönüş' : address.customerName,
+                          isHospitalStop ? hospitalLabel : address.customerName,
                           style: TextStyle(
                             fontSize: 13, fontWeight: FontWeight.w700,
                             color: isCompleted ? AppColors.textLight : AppColors.textDark,
@@ -468,7 +474,7 @@ class _AddressItem extends StatelessWidget {
               ),
             ),
           ),
-          if (!address.isReturnToBase)
+          if (!isHospitalStop)
             IconButton(
             onPressed: () {
               showDialog(

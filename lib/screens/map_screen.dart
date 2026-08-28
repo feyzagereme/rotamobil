@@ -592,7 +592,7 @@ class _MapScreenState extends State<MapScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(address.customerName,
+                  Text(address.displayName,
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                   const SizedBox(height: 2),
                   Text('${address.street}, ${address.district}',

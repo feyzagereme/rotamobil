@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -21,7 +20,6 @@ class RouteProvider extends ChangeNotifier {
   String _routeStatus = 'active';
   bool _isLoading = false;
   String? _errorMessage;
-  Timer? _syncTimer;
 
   // Ağ bağlantısı olmadığında, cihazda daha önce kaydedilmiş son rota
   // gösteriliyorsa true olur. Kullanıcıya "çevrimdışı, eski veri" bilgisi
@@ -59,7 +57,6 @@ class RouteProvider extends ChangeNotifier {
 
   RouteProvider() {
     loadActiveRoute();
-    startAutoSync();
   }
 
   List<Address> get addresses => _addresses;
@@ -113,6 +110,11 @@ class RouteProvider extends ChangeNotifier {
     // (başlangıç/hastane) otomatik tamamlanmış sayılır — sürücü zaten
     // orada. Son durak (hastaneye dönüş) diğer duraklar gibi elle
     // tamamlanır, sadece görünümü farklıdır. İkisi de sayaca dahildir.
+    //
+    // Takvim senkronundan gelen günlerde ortada ayrıca bir "öğlen hastaneye
+    // dönüş" düğümü olabilir (stop.midday=true -> Address.isMiddayReturn).
+    // O düğüm middle içinde olduğu gibi korunuyor; elle tamamlanır ve
+    // sayaca dahildir, tıpkı son duraktaki hastane gibi.
     if (parsedAddresses.length > 2) {
       final first = parsedAddresses.first;
       final last = parsedAddresses.last;
@@ -224,18 +226,9 @@ class RouteProvider extends ChangeNotifier {
     }
   }
 
-  void startAutoSync() {
-    _syncTimer?.cancel();
-    _syncTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-      loadActiveRoute();
-    });
-  }
-
-  void stopAutoSync() {
-    _syncTimer?.cancel();
-    _syncTimer = null;
-  }
-
+  // Periyodik senkron artık [SyncScheduler] tarafından yürütülüyor
+  // (bkz. main.dart / MainApp). Provider yalnızca tek seferlik yükleme
+  // ve tazeleme sunar.
   Future<void> refresh() => loadActiveRoute();
 
   Future<void> reorder(int oldIndex, int newIndex) async {
@@ -479,13 +472,35 @@ class RouteProvider extends ChangeNotifier {
 
       final position = await Geolocator.getCurrentPosition();
 
-      final pendingAddresses =
-          _addresses.where((a) => !a.isCompleted).toList();
-      final completedAddresses =
-          _addresses.where((a) => a.isCompleted).toList();
+      // Yapısal düğümler (başlangıç, öğlen hastaneye dönüş, son dönüş) sabah
+      // ve öğle turlarının sınırıdır — optimize edilmez, yerleri korunur.
+      // Yalnızca İÇİNDE bulunulan vardiya segmentinin bekleyen ziyaret
+      // durakları yeniden sıralanır: ilk bekleyen yapısal düğüme kadar olan,
+      // henüz tamamlanmamış normal duraklar. Böylece "Optimize" iki vardiyayı
+      // tek tura birleştirmez.
+      bool isStructural(Address a) =>
+          a.isStartPoint || a.isReturnToBase || a.isMiddayReturn;
 
-      if (pendingAddresses.isEmpty) {
-        _optimizeError = 'Optimize edilecek tamamlanmamış durak yok.';
+      final firstPendingStructuralIdx = _addresses.indexWhere(
+        (a) => isStructural(a) && !a.isCompleted,
+      );
+      final segmentEnd = firstPendingStructuralIdx == -1
+          ? _addresses.length
+          : firstPendingStructuralIdx; // bu index hariç
+
+      final optimizable = <Address>[];
+      final optimizableIndices = <int>[];
+      for (var i = 0; i < segmentEnd; i++) {
+        final a = _addresses[i];
+        if (!a.isCompleted && !isStructural(a)) {
+          optimizable.add(a);
+          optimizableIndices.add(i);
+        }
+      }
+
+      if (optimizable.length < 2) {
+        _optimizeError =
+            'Bu vardiyada optimize edilecek yeterli durak yok (en az 2).';
         return false;
       }
 
@@ -497,7 +512,7 @@ class RouteProvider extends ChangeNotifier {
             'latitude': position.latitude,
             'longitude': position.longitude,
           },
-          'stops': pendingAddresses
+          'stops': optimizable
               .map((a) => {
                     'id': a.id,
                     'latitude': a.latitude,
@@ -516,8 +531,17 @@ class RouteProvider extends ChangeNotifier {
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       final optimizedOrder = List<int>.from(decoded['optimizedOrder']);
 
-      final reordered = optimizedOrder.map((i) => pendingAddresses[i]).toList();
-      _addresses = [...completedAddresses, ...reordered];
+      final reordered =
+          optimizedOrder.map((i) => optimizable[i]).toList(growable: false);
+
+      // Optimize edilen durakları, orijinal listede işgal ettikleri
+      // konumlara sırayla geri yerleştir; tamamlanan duraklar ve yapısal
+      // düğümler yerinde kalır.
+      final newList = List<Address>.from(_addresses);
+      for (var k = 0; k < optimizableIndices.length; k++) {
+        newList[optimizableIndices[k]] = reordered[k];
+      }
+      _addresses = newList;
 
       for (int i = 0; i < _addresses.length; i++) {
         _addresses[i] = _addresses[i].copyWith(orderNumber: i + 1);
@@ -538,11 +562,5 @@ class RouteProvider extends ChangeNotifier {
     if (value is Map<String, dynamic>) return value;
     if (value is Map) return value.cast<String, dynamic>();
     return <String, dynamic>{};
-  }
-
-  @override
-  void dispose() {
-    stopAutoSync();
-    super.dispose();
   }
 }

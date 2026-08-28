@@ -8,7 +8,6 @@ import 'screens/welcome_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/route_list_screen.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'screens/calendar_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/guest/guest_app.dart';
@@ -17,7 +16,9 @@ import 'services/auth_service.dart';
 import 'services/route_provider.dart';
 import 'services/location_service.dart';
 import 'services/fleet_provider.dart';
+import 'services/sync_scheduler.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'services/notification_service.dart';
 import 'theme/app_colors.dart';
 
@@ -25,16 +26,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await Firebase.initializeApp(
-      options: kIsWeb
-          ? const FirebaseOptions(
-              apiKey: "AIzaSyDNntalqnmuOiJrgrpahfI3RRg8r9cM91w",
-              authDomain: "rota360-35ce3.firebaseapp.com",
-              projectId: "rota360-35ce3",
-              storageBucket: "rota360-35ce3.firebasestorage.app",
-              messagingSenderId: "434121736536",
-              appId: "1:434121736536:web:e8a409cb916d03dec7e52d",
-            )
-          : null,
+      options: DefaultFirebaseOptions.currentPlatform,
     );
     await NotificationService.initialize();
   } catch (e) {
@@ -132,20 +124,30 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     const ProfileScreen(),
   ];
 
+  // Rota + filo senkronu tek zamanlayıcıda toplanıyor (eskiden iki ayrı
+  // provider ayrı ayrı 10sn'lik Timer.periodic çalıştırıyordu). Uygulama
+  // arka plana geçince durur, ön plana dönünce anında bir tur çalışıp
+  // devam eder.
+  late final SyncScheduler _sync;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     LocationService.startTrackingIfEnabled();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      context.read<RouteProvider>().addListener(_handleSessionExpiry);
-      // RouteProvider kendi constructor'ında hemen yükleniyor;
-      // FleetProvider ise otomatik senkronizasyonu 10sn'lik periyodik
-      // zamanlayıcıyla başlatıyor — ilk verinin hemen görünmesi için
-      // burada bir kez elle tetikleniyor.
-      context.read<FleetProvider>().load();
-    });
+
+    final routeProvider = context.read<RouteProvider>();
+    final fleetProvider = context.read<FleetProvider>();
+    routeProvider.addListener(_handleSessionExpiry);
+    _sync = SyncScheduler(
+      onTick: () async {
+        await Future.wait([
+          routeProvider.refresh(),
+          fleetProvider.load(),
+        ]);
+      },
+    );
+    _sync.start();
   }
 
   // Backend 401/403 döndüğünde (token süresi dolmuş/iptal edilmiş) oturumu
@@ -166,20 +168,24 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     });
   }
 
-  // Uygulama arka plandan ön plana dönünce günün rotasını tazele. Sürücü
-  // uygulamayı dün açıp bugün geri döndüğünde, backend artık İstanbul
-  // saatine göre "bugünün" rotasını servis ediyor — onu çekmek için
-  // yeniden yükle. (RouteProvider'ın periyodik yenilemesi yok.)
+  // Ön planda periyodik senkron çalışır; arka plana geçince zamanlayıcı
+  // durdurulur (pil/veri tasarrufu). Ön plana dönüşte start() hemen bir
+  // tur çalıştırır — sürücü uygulamayı dün açıp bugün döndüğünde backend
+  // İstanbul saatine göre "bugünün" rotasını servis ettiği için bu tazeleme
+  // önemli.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && mounted) {
-      context.read<RouteProvider>().refresh();
+    if (state == AppLifecycleState.resumed) {
+      _sync.start();
+    } else {
+      _sync.stop();
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _sync.stop();
     LocationService.stopTracking();
     context.read<RouteProvider>().removeListener(_handleSessionExpiry);
     super.dispose();

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -9,7 +8,8 @@ import '../config/app_config.dart';
 import 'auth_service.dart';
 
 /// Masaüstünden Render backend'e senkronize edilen araç çalışma alanını
-/// periyodik olarak çeker.
+/// çeker. Periyodik senkron [SyncScheduler] tarafından yürütülür
+/// (bkz. main.dart / MainApp); bu provider yalnızca [load] sunar.
 ///
 /// İçerik:
 /// - fixedHome
@@ -23,13 +23,8 @@ class FleetProvider extends ChangeNotifier {
   Map<String, dynamic>? _workspace;
   DateTime? _updatedAt;
 
-  Timer? _syncTimer;
   bool _syncFailed = false;
   bool _isLoading = false;
-
-  FleetProvider() {
-    startAutoSync();
-  }
 
   Map<String, dynamic>? get workspace => _workspace;
   DateTime? get updatedAt => _updatedAt;
@@ -154,20 +149,4 @@ class FleetProvider extends ChangeNotifier {
     }
   }
 
-  void startAutoSync() {
-    _syncTimer?.cancel();
-
-    _syncTimer = Timer.periodic(const Duration(seconds: 10), (_) => load());
-  }
-
-  void stopAutoSync() {
-    _syncTimer?.cancel();
-    _syncTimer = null;
-  }
-
-  @override
-  void dispose() {
-    stopAutoSync();
-    super.dispose();
-  }
 }

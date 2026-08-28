@@ -24,6 +24,13 @@ class Address {
   /// görünümü (etiket/ikon) farklıdır.
   final bool isReturnToBase;
 
+  /// Bu durak, sabah vardiyası bittikten sonra öğle vardiyasına başlamadan
+  /// önce hastaneye yapılan ara dönüşse true. Sabah ve öğle rotaları ayrı
+  /// birer kapalı tur (ev→duraklar→ev) olarak planlanıyor; bu düğüm ikisinin
+  /// arasındaki hastane durağı. `isReturnToBase` gibi elle tamamlanır.
+  /// Backend route_json'da stop'un `midday: true` alanından gelir.
+  final bool isMiddayReturn;
+
   Address({
     required this.id,
     required this.orderNumber,
@@ -41,9 +48,20 @@ class Address {
     this.phone,
     this.isStartPoint = false,
     this.isReturnToBase = false,
+    this.isMiddayReturn = false,
   });
 
   String get fullAddress => '$street, $district, $city, $postalCode, $country';
+
+  /// Liste/kart başlıklarında gösterilecek ad. Hastane düğümleri (başlangıç,
+  /// öğle arası dönüş, son dönüş) için ham adres yerine anlamlı bir etiket
+  /// döner.
+  String get displayName {
+    if (isMiddayReturn) return 'Hastaneye Dönüş (Öğle)';
+    if (isReturnToBase) return 'Hastaneye Dönüş';
+    if (isStartPoint) return 'Başlangıç';
+    return customerName;
+  }
 
   factory Address.fromRouteStop(
     Map<String, dynamic> json, {
@@ -80,6 +98,7 @@ class Address {
       isCompleted: _toBool(json['completed'] ?? json['isCompleted'], false),
       notes: json['notes']?.toString(),
       phone: _toNullableString(json['phone'] ?? json['customerPhone'] ?? json['telefon']),
+      isMiddayReturn: _toBool(json['midday'] ?? json['isMiddayReturn'], false),
     );
   }
 
@@ -107,6 +126,7 @@ class Address {
     int? orderNumber,
     bool? isStartPoint,
     bool? isReturnToBase,
+    bool? isMiddayReturn,
     String? notes,
   }) {
     return Address(
@@ -125,6 +145,7 @@ class Address {
       notes: notes ?? this.notes,
       isStartPoint: isStartPoint ?? this.isStartPoint,
       isReturnToBase: isReturnToBase ?? this.isReturnToBase,
+      isMiddayReturn: isMiddayReturn ?? this.isMiddayReturn,
     );
   }
 
