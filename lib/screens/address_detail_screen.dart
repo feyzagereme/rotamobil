@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/address_model.dart';
+import '../services/maps_launcher.dart';
 import '../services/route_provider.dart';
 import '../theme/app_colors.dart';
 
@@ -41,14 +42,7 @@ class _AddressDetailScreenState extends State<AddressDetailScreen> {
   }
 
   Future<void> _launchNavigation() async {
-    final url = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1'
-      '&destination=${widget.address.latitude},${widget.address.longitude}'
-      '&travelmode=driving',
-    );
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
+    await launchNavigation(context, widget.address.latitude, widget.address.longitude);
   }
 
   Future<void> _launchCall(String phone) async {

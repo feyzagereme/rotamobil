@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../services/guest/guest_route_service.dart';
+import '../../services/maps_launcher.dart';
 
 class GuestAddressDetailScreen extends StatefulWidget {
   final GuestAddress address;
@@ -48,11 +48,7 @@ class _GuestAddressDetailScreenState extends State<GuestAddressDetailScreen> {
   }
 
   Future<void> _launchNavigation() async {
-    final url = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1'
-      '&destination=${widget.address.latitude},${widget.address.longitude}&travelmode=driving',
-    );
-    if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
+    await launchNavigation(context, widget.address.latitude, widget.address.longitude);
   }
 
   Future<void> _shareAddress() async {

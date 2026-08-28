@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
 import '../../services/guest/guest_route_service.dart';
+import '../../services/maps_launcher.dart';
 
 class GuestMapScreen extends StatefulWidget {
   final bool pickMode;
@@ -165,11 +165,7 @@ class _GuestMapScreenState extends State<GuestMapScreen> {
   }
 
   Future<void> _launchNav(GuestAddress address) async {
-    final url = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1'
-      '&destination=${address.latitude},${address.longitude}&travelmode=driving',
-    );
-    if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
+    await launchNavigation(context, address.latitude, address.longitude);
   }
 
   LatLng get _center {

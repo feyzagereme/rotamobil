@@ -523,7 +523,7 @@ class _GuideSheetState extends State<_GuideSheet> {
       items: [
         _GuideItem(Icons.touch_app_rounded, 'Adres Ekle', 'Haritada boş bir yere dokun, adres bilgisi otomatik gelir.'),
         _GuideItem(Icons.location_on_rounded, 'Marker', 'Haritadaki numaralı noktalara tıklayarak adres detayını görebilirsin.'),
-        _GuideItem(Icons.navigation_rounded, 'Navigasyon', 'Adres detayında "Navigasyonu Başlat" ile Google Maps açılır.'),
+        _GuideItem(Icons.navigation_rounded, 'Navigasyon', 'Adres detayında "Navigasyonu Başlat" ile harita uygulaması açılır.'),
       ],
     ),
     _GuideSection(
