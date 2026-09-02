@@ -300,6 +300,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onReorder: provider.previewReorder,
                 itemBuilder: (ctx, index) {
                   final address = addresses[index];
+                  // Tamamlanmış duraklar ve yapısal düğümler sıralanamaz —
+                  // tutamağı da pasif göster (yoksa çekilip eski yerine
+                  // "zıplıyor", bozuk gibi duruyordu).
+                  final locked = address.isCompleted ||
+                      address.isStartPoint ||
+                      address.isReturnToBase ||
+                      address.isMiddayReturn;
+                  const dragHandle = Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                    child: Icon(Icons.drag_handle_rounded, color: AppColors.textLight, size: 20),
+                  );
                   return Material(
                     key: ValueKey(address.id),
                     color: Colors.transparent,
@@ -313,13 +324,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         child: Row(
                           children: [
-                            ReorderableDragStartListener(
-                              index: index,
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                                child: Icon(Icons.drag_handle_rounded, color: AppColors.textLight, size: 20),
-                              ),
-                            ),
+                            locked
+                                ? Opacity(opacity: 0.3, child: dragHandle)
+                                : ReorderableDragStartListener(
+                                    index: index,
+                                    child: dragHandle,
+                                  ),
                             Container(
                               width: 30, height: 30,
                               decoration: BoxDecoration(

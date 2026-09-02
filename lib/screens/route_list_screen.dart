@@ -287,34 +287,38 @@ class _RouteListScreenState extends State<RouteListScreen> {
                   onReorder: _onReorder,
                   itemBuilder: (context, index) {
                     final address = addresses[index];
-                    if (address.isStartPoint) {
-                      return Container(
-                        key: ValueKey(address.id),
-                        child: _AddressItem(
-                          address: address,
-                          index: index,
-                          onDelete: () {},
+                    // Tamamlanmış duraklar ve yapısal düğümler (başlangıç /
+                    // hastaneye dönüş / öğle dönüşü) sıralanamaz — sürükleme
+                    // dinleyicisi olmadan gösterilir; yoksa çekilince sessizce
+                    // eski yerine dönüp bozuk gibi duruyordu.
+                    final locked = address.isCompleted ||
+                        address.isStartPoint ||
+                        address.isReturnToBase ||
+                        address.isMiddayReturn;
+                    final tile = GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AddressDetailScreen(address: address, index: index),
                         ),
-                      );
+                      ),
+                      child: _AddressItem(
+                        address: address,
+                        index: index,
+                        onDelete: (address.isStartPoint ||
+                                address.isReturnToBase ||
+                                address.isMiddayReturn)
+                            ? () {}
+                            : () => context.read<RouteProvider>().removeAddress(index),
+                      ),
+                    );
+                    if (locked) {
+                      return KeyedSubtree(key: ValueKey(address.id), child: tile);
                     }
                     return ReorderableDragStartListener(
                       key: ValueKey(address.id),
                       index: index,
-                      child: GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => AddressDetailScreen(address: address, index: index),
-                          ),
-                        ),
-                        child: _AddressItem(
-                          address: address,
-                          index: index,
-                          onDelete: (address.isReturnToBase || address.isMiddayReturn)
-                              ? () {}
-                              : () => context.read<RouteProvider>().removeAddress(index),
-                        ),
-                      ),
+                      child: tile,
                     );
                   },
                 ),

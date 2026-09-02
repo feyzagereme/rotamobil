@@ -256,11 +256,15 @@ class RouteProvider extends ChangeNotifier {
 
     bool isStructural(Address a) =>
         a.isStartPoint || a.isReturnToBase || a.isMiddayReturn;
+    // "Taşınabilir" = bekleyen ziyaret durağı. Tamamlanmış duraklar ve
+    // yapısal düğümler (başlangıç / hastaneye dönüş / öğle dönüşü) yerinde
+    // kalır — ne sürüklenebilir ne de araya bırakılabilir.
+    bool isMovable(Address a) => !isStructural(a) && !a.isCompleted;
 
     if (_isOptimizing) return; // önceki onay hâlâ işleniyor
 
     final pinned = _addresses[oldIndex];
-    if (isStructural(pinned) || pinned.isCompleted) return;
+    if (!isMovable(pinned)) return;
 
     // İlk sürüklemeden önceki hali sakla — "Vazgeç" buraya döner. Onay
     // bekleyen ardışık sürüklemeler aynı snapshot'ı paylaşır.
@@ -268,6 +272,20 @@ class RouteProvider extends ChangeNotifier {
 
     final working = List<Address>.from(_addresses);
     working.removeAt(oldIndex);
+
+    // Bırakma hedefini bekleyen bölgeye kıstır: durak, tamamlanmış
+    // duraklardan önceye ya da hastaneye dönüş düğümünden sonraya
+    // düşemesin (aksi halde bekleyen bir durak "geçmiş" bölgesine
+    // karışıp segment hesabını ve kapalı-döngü tespitini bozuyordu).
+    final lo = working.indexWhere(isMovable);
+    final hi = working.lastIndexWhere(isMovable);
+    if (lo != -1) {
+      if (newIndex < lo) newIndex = lo;
+      if (newIndex > hi + 1) newIndex = hi + 1;
+    }
+    if (newIndex < 0) newIndex = 0;
+    if (newIndex > working.length) newIndex = working.length;
+
     working.insert(newIndex, pinned);
     _addresses = working;
     _pendingDragPinned = pinned;
