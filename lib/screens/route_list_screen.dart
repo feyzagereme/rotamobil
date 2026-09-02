@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/route_provider.dart';
 import '../widgets/app_notice.dart';
+import '../widgets/reorder_confirm_bar.dart';
 import 'address_detail_screen.dart';
 import '../models/address_model.dart';
 import '../theme/app_colors.dart';
@@ -21,17 +22,33 @@ class RouteListScreen extends StatefulWidget {
 }
 
 class _RouteListScreenState extends State<RouteListScreen> {
-  bool _isRecalculating = false;
   bool _isLoadingRoutes = false;
   List<dynamic> _backendRoutes = [];
   String? _routeError;
 
-  Future<void> _onReorder(int oldIndex, int newIndex) async {
+  /// Sürücü bir durağı sürükleyip bıraktığında çağrılır. Sadece görsel
+  /// olarak taşır; onay barı çıkar, gerçek hesaplama [_onConfirmReorder]
+  /// ile tetiklenir.
+  void _onReorder(int oldIndex, int newIndex) {
     HapticFeedback.lightImpact();
-    context.read<RouteProvider>().reorder(oldIndex, newIndex);
-    setState(() => _isRecalculating = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (mounted) setState(() => _isRecalculating = false);
+    context.read<RouteProvider>().previewReorder(oldIndex, newIndex);
+  }
+
+  void _onCancelReorder() {
+    HapticFeedback.lightImpact();
+    context.read<RouteProvider>().cancelPendingReorder();
+  }
+
+  Future<void> _onConfirmReorder() async {
+    HapticFeedback.mediumImpact();
+    final provider = context.read<RouteProvider>();
+    final ok = await provider.confirmPendingReorder();
+    if (!mounted || ok) return;
+    AppNotice.show(
+      context,
+      provider.optimizeError ?? 'Rota yeniden hesaplanamadı, tekrar deneyin.',
+      severity: AppNoticeSeverity.error,
+    );
   }
 
   @override
@@ -91,7 +108,7 @@ class _RouteListScreenState extends State<RouteListScreen> {
                 title: const Text('Rota Listesi',
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                 actions: [
-                  if (_isRecalculating)
+                  if (provider.isOptimizing)
                     const Padding(
                       padding: EdgeInsets.only(right: 16),
                       child: Row(
@@ -336,6 +353,14 @@ class _RouteListScreenState extends State<RouteListScreen> {
                       icon: const Icon(Icons.flag_rounded),
                       label: const Text('Rotayı Tamamla'),
                     ))
+              : null,
+          bottomNavigationBar: provider.hasPendingReorder
+              ? ReorderConfirmBar(
+                  label: provider.pendingDragPinned?.displayName ?? 'Durak',
+                  isBusy: provider.isOptimizing,
+                  onCancel: _onCancelReorder,
+                  onConfirm: _onConfirmReorder,
+                )
               : null,
         );
       },

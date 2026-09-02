@@ -177,9 +177,15 @@ class RouteProvider extends ChangeNotifier {
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       // Sürücü sürükleme ile sıra değiştirdiyse ve backend'e henüz
-      // kaydedilmediyse, sync verisi adres listesini ezmemeli.
-      // Persist tamamlandıktan sonraki sync doğru sırayı getirir.
-      if (!_persistPending) {
+      // kaydedilmediyse, sync verisi adres listesini ezmemeli. Bu, hem
+      // persist sırasını (_persistPending) hem de onay bekleyen bir
+      // sürükleme varken (_pendingDragPinned != null — kullanıcı henüz
+      // "Onayla"ya basmadı) geçerli: aksi halde 10sn'lik otomatik senkron
+      // araya girip pinlenen durağın referansını geçersiz kılıyor, "Onayla"
+      // basıldığında hangi durağın sabitleneceği bulunamayıp tüm segment
+      // yanlışlıkla baştan optimize ediliyordu. Persist tamamlandıktan
+      // sonraki sync doğru sırayı getirir.
+      if (!_persistPending && _pendingDragPinned == null) {
         _applyRouteData(decoded);
       }
       _isOffline = false;
@@ -231,35 +237,219 @@ class RouteProvider extends ChangeNotifier {
   // ve tazeleme sunar.
   Future<void> refresh() => loadActiveRoute();
 
-  Future<void> reorder(int oldIndex, int newIndex) async {
+  // Sürükle-bırak yapıldığında ama henüz sürücü onaylamadığında bekleyen
+  // durum. `_pendingDragSnapshot`, ilk sürüklemeden önceki listeyi tutar —
+  // "Vazgeç" bu listeye geri döner. `_pendingDragPinned`, en son
+  // sürüklenen durağı tutar — "Onayla" bu durağı sabit kabul edip gerisini
+  // onun konumundan itibaren yeniden hesaplar.
+  List<Address>? _pendingDragSnapshot;
+  Address? _pendingDragPinned;
+  bool get hasPendingReorder => _pendingDragPinned != null;
+  Address? get pendingDragPinned => _pendingDragPinned;
+
+  /// Sürücü bir durağı elle sürükleyip bıraktığında çağrılır. Sadece
+  /// GÖRSEL olarak taşır — backend'e kaydetmez, yeniden hesaplamaz.
+  /// Onay bekler (bkz. [confirmPendingReorder] / [cancelPendingReorder]).
+  void previewReorder(int oldIndex, int newIndex) {
     if (newIndex > oldIndex) newIndex--;
-    final item = _addresses.removeAt(oldIndex);
-    _addresses.insert(newIndex, item);
-    // Yeni sıra numaralarını güncelle
-    for (int i = 0; i < _addresses.length; i++) {
-      _addresses[i] = _addresses[i].copyWith(orderNumber: i + 1);
-    }
+    if (oldIndex < 0 || oldIndex >= _addresses.length) return;
+
+    bool isStructural(Address a) =>
+        a.isStartPoint || a.isReturnToBase || a.isMiddayReturn;
+
+    if (_isOptimizing) return; // önceki onay hâlâ işleniyor
+
+    final pinned = _addresses[oldIndex];
+    if (isStructural(pinned) || pinned.isCompleted) return;
+
+    // İlk sürüklemeden önceki hali sakla — "Vazgeç" buraya döner. Onay
+    // bekleyen ardışık sürüklemeler aynı snapshot'ı paylaşır.
+    _pendingDragSnapshot ??= List<Address>.from(_addresses);
+
+    final working = List<Address>.from(_addresses);
+    working.removeAt(oldIndex);
+    working.insert(newIndex, pinned);
+    _addresses = working;
+    _pendingDragPinned = pinned;
     notifyListeners();
-    _persistStopOrder(); // Backend'e kaydet
   }
 
-  /// Sürücünün değiştirdiği durak sırasını backend'e gönderir.
-  /// Ağ hatası olursa sessizce geçer — bir sonraki 10sn senkronizasyonda
-  /// backend'in sırası geri yüklenir, kullanıcıya hata gösterilmez.
-  Future<void> _persistStopOrder() async {
-    if (_activeRouteId == null || _addresses.isEmpty) return;
+  /// Sürükleyerek yapılan değişiklikten vazgeçer, sürüklemeden önceki
+  /// sıraya geri döner.
+  void cancelPendingReorder() {
+    if (_pendingDragSnapshot != null) {
+      _addresses = _pendingDragSnapshot!;
+    }
+    _pendingDragSnapshot = null;
+    _pendingDragPinned = null;
+    notifyListeners();
+  }
+
+  /// Sürücü, sürükleyip bıraktığı durağı onaylar. Onaylanan durak = "bu
+  /// durağa öncelik ver" sinyali: durak bırakıldığı pozisyonda sabit
+  /// kalır, ONDAN SONRA gelen (aynı vardiya segmentindeki, tamamlanmamış,
+  /// yapısal olmayan) duraklar backend'de bu durağın konumu origin
+  /// alınarak yeniden optimize edilir (bkz. server.js /routes/optimize).
+  /// Bu durağın ÖNCESİndeki duraklara dokunulmaz.
+  Future<bool> confirmPendingReorder() async {
+    final pinned = _pendingDragPinned;
+    if (pinned == null) return false;
+    // Onay barı, işlem bitene kadar (finally'de) "Hesaplanıyor..." ile
+    // görünür kalsın diye _pendingDragPinned burada henüz temizlenmiyor.
+
+    bool isStructural(Address a) =>
+        a.isStartPoint || a.isReturnToBase || a.isMiddayReturn;
+
+    _isOptimizing = true;
+    _optimizeError = null;
+    notifyListeners();
+
+    try {
+      final pinnedIdx = _addresses.indexOf(pinned);
+
+      // [optimizeRoute] ile aynı vardiya-segmenti mantığı: yalnızca ilk
+      // bekleyen yapısal düğüme kadar olan duraklar taşınabilir.
+      final firstPendingStructuralIdx = _addresses.indexWhere(
+        (a) => isStructural(a) && !a.isCompleted,
+      );
+      final segmentEnd = firstPendingStructuralIdx == -1
+          ? _addresses.length
+          : firstPendingStructuralIdx;
+
+      final afterIndices = <int>[];
+      for (var i = pinnedIdx + 1; i < segmentEnd; i++) {
+        final a = _addresses[i];
+        if (!a.isCompleted && !isStructural(a)) afterIndices.add(i);
+      }
+
+      if (afterIndices.length >= 2) {
+        final after = afterIndices.map((i) => _addresses[i]).toList();
+        final response = await http.post(
+          Uri.parse('$_baseUrl/routes/optimize'),
+          headers: await AuthService.authHeaders(),
+          body: jsonEncode({
+            'origin': {
+              'latitude': pinned.latitude,
+              'longitude': pinned.longitude,
+            },
+            'stops': after
+                .map((a) => {
+                      'id': a.id,
+                      'latitude': a.latitude,
+                      'longitude': a.longitude,
+                    })
+                .toList(),
+          }),
+        ).timeout(const Duration(seconds: 20));
+
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          _flagIfSessionError(response.body);
+          _optimizeError =
+              'Kalan duraklar optimize edilemedi: ${response.statusCode}';
+          // Sürükleme sırası yine de kaydedilsin — en azından kullanıcının
+          // elle verdiği sıra kaybolmasın.
+          for (int i = 0; i < _addresses.length; i++) {
+            _addresses[i] = _addresses[i].copyWith(orderNumber: i + 1);
+          }
+          notifyListeners();
+          await _persistStopOrder();
+          return false;
+        }
+
+        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+        final optimizedOrder = List<int>.from(decoded['optimizedOrder']);
+        final reordered =
+            optimizedOrder.map((i) => after[i]).toList(growable: false);
+
+        final newList = List<Address>.from(_addresses);
+        for (var k = 0; k < afterIndices.length; k++) {
+          newList[afterIndices[k]] = reordered[k];
+        }
+        _addresses = newList;
+      }
+
+      for (int i = 0; i < _addresses.length; i++) {
+        _addresses[i] = _addresses[i].copyWith(orderNumber: i + 1);
+      }
+
+      notifyListeners();
+      final persisted = await _persistStopOrder();
+      if (!persisted) {
+        _optimizeError =
+            'Yeni sıra kaydedilemedi. Birkaç saniye içinde otomatik senkron eski sırayı geri getirebilir — tekrar dener misin?';
+        return false;
+      }
+      _optimizeError = null;
+      return true;
+    } catch (e) {
+      _optimizeError = 'Rota yeniden hesaplanırken hata oluştu: $e';
+      for (int i = 0; i < _addresses.length; i++) {
+        _addresses[i] = _addresses[i].copyWith(orderNumber: i + 1);
+      }
+      notifyListeners();
+      await _persistStopOrder();
+      return false;
+    } finally {
+      _isOptimizing = false;
+      _pendingDragSnapshot = null;
+      _pendingDragPinned = null;
+      notifyListeners();
+    }
+  }
+
+  /// Sürücünün değiştirdiği durak sırasını backend'e gönderir. Başarılı
+  /// kayıt olduysa true döner. ÖNEMLİ: yalnızca ağ hatasını değil, HTTP
+  /// durum kodunu da kontrol eder — daha önce burada sadece exception
+  /// yakalanıyordu, backend 4xx/5xx dönse bile "başarılı" sayılıyordu.
+  /// Bu yüzden onaylanan bir sürükleme local'de doğru görünüp birkaç
+  /// saniye sonraki senkronda (kayıt aslında hiç gitmediği için) sessizce
+  /// eski sıraya dönüyordu. Artık çağıran taraf (bkz. confirmPendingReorder)
+  /// false dönünce kullanıcıya açıkça hata gösteriyor.
+  Future<bool> _persistStopOrder() async {
+    if (_activeRouteId == null || _addresses.isEmpty) return false;
     _persistPending = true;
     try {
+      // Konum da gönderiliyor: takvim senkronundan gelen duraklarda `id`
+      // stabil değil (Address.id sırasız durumda pozisyondan uyduruluyor),
+      // backend bu yüzden eşleştirmeyi öncelikle lat/lng ile yapıyor.
       final stops = _addresses
-          .map((a) => {'id': a.id, 'order': a.orderNumber})
+          .asMap()
+          .entries
+          .map((e) => {
+                'id': e.value.id,
+                'order': e.key + 1,
+                'latitude': e.value.latitude,
+                'longitude': e.value.longitude,
+              })
           .toList();
-      await http.patch(
+      final response = await http.patch(
         Uri.parse('$_baseUrl/routes/$_activeRouteId/stops'),
         headers: await AuthService.authHeaders(),
         body: jsonEncode({'stops': stops}),
       ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        _flagIfSessionError(response.body);
+        return false;
+      }
+      // Backend 200 dönse bile hiçbir durağı eşleyemediyse (matched == 0)
+      // kayıt aslında yapılmadı — başarısız say ki çağıran hata göstersin.
+      try {
+        final body = jsonDecode(response.body);
+        if (body is Map &&
+            body['total'] is num &&
+            (body['total'] as num) > 0 &&
+            body['matched'] is num &&
+            (body['matched'] as num) == 0) {
+          return false;
+        }
+      } catch (_) {
+        // gövde beklenen formatta değil — eski backend olabilir, 2xx'e güven
+      }
+      return true;
     } catch (_) {
       // Ağ hatası — sessizce geç, sonraki sync düzeltir
+      return false;
     } finally {
       _persistPending = false;
     }

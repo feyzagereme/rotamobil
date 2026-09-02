@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/route_provider.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_notice.dart';
+import '../widgets/reorder_confirm_bar.dart';
 import 'address_detail_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -19,6 +21,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     const months = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
     const days = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
     return '${days[now.weekday - 1]}, ${now.day} ${months[now.month - 1]} ${now.year}';
+  }
+
+  void _onCancelReorder() {
+    context.read<RouteProvider>().cancelPendingReorder();
+  }
+
+  Future<void> _onConfirmReorder() async {
+    final provider = context.read<RouteProvider>();
+    final ok = await provider.confirmPendingReorder();
+    if (!mounted || ok) return;
+    AppNotice.show(
+      context,
+      provider.optimizeError ?? 'Rota yeniden hesaplanamadı, tekrar deneyin.',
+      severity: AppNoticeSeverity.error,
+    );
   }
 
   void _showGuide(BuildContext context) {
@@ -280,7 +297,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               // ── Sürüklenebilir rota listesi
               SliverReorderableList(
                 itemCount: addresses.length,
-                onReorder: provider.reorder,
+                onReorder: provider.previewReorder,
                 itemBuilder: (ctx, index) {
                   final address = addresses[index];
                   return Material(
@@ -363,6 +380,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ],
           ),
+          bottomNavigationBar: provider.hasPendingReorder
+              ? ReorderConfirmBar(
+                  label: provider.pendingDragPinned?.displayName ?? 'Durak',
+                  isBusy: provider.isOptimizing,
+                  onCancel: _onCancelReorder,
+                  onConfirm: _onConfirmReorder,
+                )
+              : null,
         );
       },
     );
