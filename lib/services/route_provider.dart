@@ -266,10 +266,6 @@ class RouteProvider extends ChangeNotifier {
     final pinned = _addresses[oldIndex];
     if (!isMovable(pinned)) return;
 
-    // İlk sürüklemeden önceki hali sakla — "Vazgeç" buraya döner. Onay
-    // bekleyen ardışık sürüklemeler aynı snapshot'ı paylaşır.
-    _pendingDragSnapshot ??= List<Address>.from(_addresses);
-
     final working = List<Address>.from(_addresses);
     working.removeAt(oldIndex);
 
@@ -285,6 +281,15 @@ class RouteProvider extends ChangeNotifier {
     }
     if (newIndex < 0) newIndex = 0;
     if (newIndex > working.length) newIndex = working.length;
+
+    // Kıstırma sonucu durak yine aynı yere düşüyorsa (ör. tamamlanmış
+    // bölgeye bırakılmaya çalışıldı) hiçbir şey değişmemiştir — onay
+    // barını gösterme, bekleyen durum kurma.
+    if (newIndex == oldIndex) return;
+
+    // İlk sürüklemeden önceki hali sakla — "Vazgeç" buraya döner. Onay
+    // bekleyen ardışık sürüklemeler aynı snapshot'ı paylaşır.
+    _pendingDragSnapshot ??= List<Address>.from(_addresses);
 
     working.insert(newIndex, pinned);
     _addresses = working;

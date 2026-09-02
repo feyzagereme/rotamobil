@@ -40,7 +40,7 @@ class ReorderConfirmBar extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                '"$label" öne alındı. Rota yeniden hesaplansın mı?',
+                '"$label" taşındı. Rota yeniden hesaplansın mı?',
                 style: const TextStyle(fontSize: 12.5, color: AppColors.textMid, fontWeight: FontWeight.w600),
               ),
             ),
